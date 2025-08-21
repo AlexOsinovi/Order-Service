@@ -1,0 +1,69 @@
+package by.osinovi.orderservice.service.impl;
+
+import by.osinovi.orderservice.dto.orderItem.OrderItemRequestDto;
+import by.osinovi.orderservice.dto.orderItem.OrderItemResponseDto;
+import by.osinovi.orderservice.entity.Order;
+import by.osinovi.orderservice.entity.OrderItem;
+import by.osinovi.orderservice.mapper.OrderItemMapper;
+import by.osinovi.orderservice.repository.OrderItemRepository;
+import by.osinovi.orderservice.repository.OrderRepository;
+import by.osinovi.orderservice.service.OrderItemService;
+import jakarta.transaction.Transactional;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+public class OrderItemServiceImpl implements OrderItemService {
+
+    @Autowired
+    private OrderItemRepository orderItemRepository;
+
+    @Autowired
+    private OrderRepository orderRepository;
+
+    @Autowired
+    private OrderItemMapper orderItemMapper;
+
+    @Override
+    public OrderItemResponseDto createOrderItem(OrderItemRequestDto orderItemRequestDto, Long orderId) {
+        Order order = orderRepository.findById(orderId).orElseThrow(() -> new RuntimeException("Order not found"));
+        OrderItem orderItem = orderItemMapper.toEntity(orderItemRequestDto);
+        orderItem.setOrder(order);
+        OrderItem saved = orderItemRepository.save(orderItem);
+        return orderItemMapper.toResponse(saved);
+    }
+
+    @Override
+    public OrderItemResponseDto getOrderItemById(Long id) {
+        OrderItem orderItem = orderItemRepository.findById(id).orElseThrow(() -> new RuntimeException("Order item not found"));
+        return orderItemMapper.toResponse(orderItem);
+    }
+
+    @Override
+    public List<OrderItemResponseDto> getOrderItemsByOrderId(Long orderId) {
+        return orderItemRepository.findByOrderId(orderId).stream()
+                .map(orderItemMapper::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public OrderItemResponseDto updateOrderItem(Long id, OrderItemRequestDto orderItemRequestDto) {
+        OrderItem existing = orderItemRepository.findById(id).orElseThrow(() -> new RuntimeException("Order item not found"));
+        existing.setQuantity(orderItemRequestDto.getQuantity());
+        if (!existing.getItem().getId().equals(orderItemRequestDto.getItemId())) {
+            existing.setItem(new by.osinovi.orderservice.entity.Item(orderItemRequestDto.getItemId()));
+        }
+        OrderItem updated = orderItemRepository.save(existing);
+        return orderItemMapper.toResponse(updated);
+    }
+
+    @Override
+    @Transactional
+    public void deleteOrderItem(Long id) {
+        orderItemRepository.deleteById(id);
+    }
+}
