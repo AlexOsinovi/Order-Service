@@ -1,0 +1,17 @@
+databaseChangeLog:
+  - changeSet:
+      id: 20250821-05
+      author: aleksei osinovi
+      comment: Create index on items table for name
+      changes:
+        - createIndex:
+            indexName: idx_items_name
+            tableName: items
+            columns:
+              - column:
+                  name: name
+            unique: false
+      rollback:
+        - dropIndex:
+            indexName: idx_items_name
+            tableName: items
