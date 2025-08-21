@@ -5,6 +5,7 @@ import by.osinovi.orderservice.dto.order.OrderResponseDto;
 import by.osinovi.orderservice.dto.order.OrderWithUserResponseDto;
 import by.osinovi.orderservice.dto.userInfo.UserInfoResponseDto;
 import by.osinovi.orderservice.entity.Order;
+import by.osinovi.orderservice.exception.NotFoundException;
 import by.osinovi.orderservice.mapper.OrderItemMapper;
 import by.osinovi.orderservice.mapper.OrderMapper;
 import by.osinovi.orderservice.repository.OrderRepository;
@@ -44,13 +45,11 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public OrderWithUserResponseDto getOrderById(Long id) {
-        Order order = orderRepository.findById(id).orElseThrow(() -> new RuntimeException("Order not found"));
+        Order order = orderRepository.findById(id).orElseThrow(() -> new NotFoundException("Order with ID " + id + " not found"));
         OrderResponseDto orderResponse = orderMapper.toResponse(order);
         UserInfoResponseDto user = userInfoService.getUserInfoById(order.getUserId());
         return new OrderWithUserResponseDto(orderResponse, user);
     }
-
-
 
     @Override
     public List<OrderWithUserResponseDto> getAllOrders() {
@@ -77,7 +76,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderWithUserResponseDto updateOrder(Long id, OrderRequestDto orderRequestDto) {
-        Order existing = orderRepository.findById(id).orElseThrow(() -> new RuntimeException("Order not found"));
+        Order existing = orderRepository.findById(id).orElseThrow(() -> new NotFoundException("Order with ID " + id + " not found"));
         existing.setUserId(orderRequestDto.getUserId());
         existing.setStatus(orderRequestDto.getStatus());
         existing.setCreationDate(orderRequestDto.getCreationDate());
@@ -97,6 +96,9 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public void deleteOrder(Long id) {
+        if (!orderRepository.existsById(id)) {
+            throw new NotFoundException("Order with ID " + id + " not found");
+        }
         orderRepository.deleteById(id);
     }
 }
