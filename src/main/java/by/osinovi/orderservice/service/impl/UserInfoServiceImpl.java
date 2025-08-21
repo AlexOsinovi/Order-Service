@@ -15,7 +15,7 @@ public class UserInfoServiceImpl implements UserInfoService {
     @Autowired
     private RestTemplate restTemplate;
 
-    @Value("${user-service.url}")
+    @Value("${user.service.url}")
     private String userServiceUrl;
 
     @Override
