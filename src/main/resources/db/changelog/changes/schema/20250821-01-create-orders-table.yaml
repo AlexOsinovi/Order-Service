@@ -19,8 +19,6 @@ databaseChangeLog:
                   type: bigint
                   constraints:
                     nullable: false
-                    foreignKeyName: fk_orders_users
-                    references: users(id)
               - column:
                   name: status
                   type: varchar(32)
