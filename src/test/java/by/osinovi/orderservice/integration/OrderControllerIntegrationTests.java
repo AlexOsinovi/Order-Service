@@ -29,9 +29,15 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
-import static com.github.tomakehurst.wiremock.client.WireMock.*;
+import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.get;
+
+import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static io.restassured.RestAssured.given;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.anyOf;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Testcontainers
@@ -50,7 +56,7 @@ class OrderControllerIntegrationTests {
     private ItemRepository itemRepository;
 
     @Autowired
-    private OrderRepository orderRepository; // Добавлено для очистки заказов
+    private OrderRepository orderRepository;
 
     private static WireMockServer wireMockServer;
 
@@ -79,8 +85,8 @@ class OrderControllerIntegrationTests {
         RestAssured.port = port;
         RestAssured.enableLoggingOfRequestAndResponseIfValidationFails();
         wireMockServer.resetAll();
-        orderItemRepository.deleteAll(); // Сначала очищаем order_items
-        orderRepository.deleteAll(); // Затем очищаем orders
+        orderItemRepository.deleteAll();
+        orderRepository.deleteAll();
         itemRepository.deleteAll();
     }
 
@@ -238,7 +244,6 @@ class OrderControllerIntegrationTests {
                                 .withBody(userResponse200))
         );
 
-        // Создаем заказ с PAID
         Item item1 = createTestItem();
         OrderItemRequestDto itemReq1 = new OrderItemRequestDto(item1.getId(), 2);
         OrderRequestDto request1 = new OrderRequestDto(200L, "PAID", LocalDate.now(), List.of(itemReq1));
@@ -250,7 +255,6 @@ class OrderControllerIntegrationTests {
                 .then()
                 .statusCode(HttpStatus.CREATED.value());
 
-        // Создаем заказ с NEW для полноты теста
         Item item2 = createTestItem();
         OrderItemRequestDto itemReq2 = new OrderItemRequestDto(item2.getId(), 1);
         OrderRequestDto request2 = new OrderRequestDto(200L, "NEW", LocalDate.now(), List.of(itemReq2));

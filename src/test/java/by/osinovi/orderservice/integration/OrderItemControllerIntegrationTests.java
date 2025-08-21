@@ -23,7 +23,10 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 import static io.restassured.RestAssured.given;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Testcontainers
@@ -96,7 +99,7 @@ class OrderItemControllerIntegrationTests {
     @Test
     void createOrderItem_InvalidRequest_ReturnsBadRequest() {
         Order order = createTestOrder();
-        OrderItemRequestDto request = new OrderItemRequestDto(null, 0); // Invalid request
+        OrderItemRequestDto request = new OrderItemRequestDto(null, 0);
 
         given()
                 .contentType(ContentType.JSON)
