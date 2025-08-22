@@ -3,17 +3,17 @@ package by.osinovi.orderservice.service.impl;
 import by.osinovi.orderservice.dto.userInfo.UserInfoResponseDto;
 import by.osinovi.orderservice.exception.NotFoundException;
 import by.osinovi.orderservice.service.UserInfoService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 @Service
+@RequiredArgsConstructor
 public class UserInfoServiceImpl implements UserInfoService {
 
-    @Autowired
-    private RestTemplate restTemplate;
+    private final RestTemplate restTemplate;
 
     @Value("${user.service.url}")
     private String userServiceUrl;

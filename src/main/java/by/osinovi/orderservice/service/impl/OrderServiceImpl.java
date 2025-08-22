@@ -12,26 +12,20 @@ import by.osinovi.orderservice.repository.OrderRepository;
 import by.osinovi.orderservice.service.OrderService;
 import by.osinovi.orderservice.service.UserInfoService;
 import jakarta.transaction.Transactional;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class OrderServiceImpl implements OrderService {
 
-    @Autowired
-    private OrderRepository orderRepository;
-
-    @Autowired
-    private OrderMapper orderMapper;
-
-    @Autowired
-    private OrderItemMapper orderItemMapper;
-
-    @Autowired
-    private UserInfoService userInfoService;
+    private final OrderRepository orderRepository;
+    private final OrderMapper orderMapper;
+    private final OrderItemMapper orderItemMapper;
+    private final UserInfoService userInfoService;
 
     @Override
     public OrderWithUserResponseDto createOrder(OrderRequestDto orderRequestDto) {
@@ -59,7 +53,7 @@ public class OrderServiceImpl implements OrderService {
                     UserInfoResponseDto user = userInfoService.getUserInfoById(order.getUserId());
                     return new OrderWithUserResponseDto(orderResponse, user);
                 })
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
@@ -70,7 +64,7 @@ public class OrderServiceImpl implements OrderService {
                     UserInfoResponseDto user = userInfoService.getUserInfoById(order.getUserId());
                     return new OrderWithUserResponseDto(orderResponse, user);
                 })
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override

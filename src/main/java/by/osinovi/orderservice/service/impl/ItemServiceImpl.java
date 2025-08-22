@@ -8,20 +8,18 @@ import by.osinovi.orderservice.mapper.ItemMapper;
 import by.osinovi.orderservice.repository.ItemRepository;
 import by.osinovi.orderservice.service.ItemService;
 import jakarta.transaction.Transactional;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class ItemServiceImpl implements ItemService {
 
-    @Autowired
-    private ItemRepository itemRepository;
-
-    @Autowired
-    private ItemMapper itemMapper;
+    private final ItemRepository itemRepository;
+    private final ItemMapper itemMapper;
 
     @Override
     public ItemResponseDto createItem(ItemRequestDto itemRequestDto) {
@@ -40,7 +38,7 @@ public class ItemServiceImpl implements ItemService {
     public List<ItemResponseDto> getAllItems() {
         return itemRepository.findAll().stream()
                 .map(itemMapper::toResponse)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
