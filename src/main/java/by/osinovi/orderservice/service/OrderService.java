@@ -1,9 +1,8 @@
 package by.osinovi.orderservice.service;
 
 import by.osinovi.orderservice.dto.order.OrderRequestDto;
-import by.osinovi.orderservice.dto.order.OrderResponseDto;
 import by.osinovi.orderservice.dto.order.OrderWithUserResponseDto;
-import by.osinovi.orderservice.dto.userInfo.UserInfoResponseDto;
+
 import java.util.List;
 
 public interface OrderService {

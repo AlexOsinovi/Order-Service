@@ -1,6 +1,6 @@
 package by.osinovi.orderservice.service;
 
-import by.osinovi.orderservice.dto.userInfo.UserInfoResponseDto;
+import by.osinovi.orderservice.dto.user_info.UserInfoResponseDto;
 import by.osinovi.orderservice.exception.NotFoundException;
 import by.osinovi.orderservice.service.impl.UserInfoServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,7 +15,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.*;
 
-public class UserInfoServiceImplTests {
+class UserInfoServiceImplTests {
 
 	@Mock
 	private RestTemplate restTemplate;

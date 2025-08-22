@@ -1,6 +1,6 @@
 package by.osinovi.orderservice.service.impl;
 
-import by.osinovi.orderservice.dto.userInfo.UserInfoResponseDto;
+import by.osinovi.orderservice.dto.user_info.UserInfoResponseDto;
 import by.osinovi.orderservice.exception.NotFoundException;
 import by.osinovi.orderservice.service.UserInfoService;
 import lombok.RequiredArgsConstructor;

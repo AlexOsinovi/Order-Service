@@ -3,7 +3,7 @@ package by.osinovi.orderservice.service.impl;
 import by.osinovi.orderservice.dto.order.OrderRequestDto;
 import by.osinovi.orderservice.dto.order.OrderResponseDto;
 import by.osinovi.orderservice.dto.order.OrderWithUserResponseDto;
-import by.osinovi.orderservice.dto.userInfo.UserInfoResponseDto;
+import by.osinovi.orderservice.dto.user_info.UserInfoResponseDto;
 import by.osinovi.orderservice.entity.Order;
 import by.osinovi.orderservice.exception.NotFoundException;
 import by.osinovi.orderservice.mapper.OrderItemMapper;
@@ -16,7 +16,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor

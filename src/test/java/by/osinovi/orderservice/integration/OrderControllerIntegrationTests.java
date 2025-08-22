@@ -1,7 +1,7 @@
 package by.osinovi.orderservice.integration;
 
 import by.osinovi.orderservice.dto.order.OrderRequestDto;
-import by.osinovi.orderservice.dto.orderItem.OrderItemRequestDto;
+import by.osinovi.orderservice.dto.order_item.OrderItemRequestDto;
 import by.osinovi.orderservice.entity.Item;
 import by.osinovi.orderservice.repository.ItemRepository;
 import by.osinovi.orderservice.repository.OrderItemRepository;

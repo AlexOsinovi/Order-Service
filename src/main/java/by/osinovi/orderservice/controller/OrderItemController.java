@@ -1,7 +1,7 @@
 package by.osinovi.orderservice.controller;
 
-import by.osinovi.orderservice.dto.orderItem.OrderItemRequestDto;
-import by.osinovi.orderservice.dto.orderItem.OrderItemResponseDto;
+import by.osinovi.orderservice.dto.order_item.OrderItemRequestDto;
+import by.osinovi.orderservice.dto.order_item.OrderItemResponseDto;
 import by.osinovi.orderservice.service.OrderItemService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

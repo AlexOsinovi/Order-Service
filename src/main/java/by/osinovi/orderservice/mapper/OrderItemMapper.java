@@ -1,7 +1,7 @@
 package by.osinovi.orderservice.mapper;
 
-import by.osinovi.orderservice.dto.orderItem.OrderItemRequestDto;
-import by.osinovi.orderservice.dto.orderItem.OrderItemResponseDto;
+import by.osinovi.orderservice.dto.order_item.OrderItemRequestDto;
+import by.osinovi.orderservice.dto.order_item.OrderItemResponseDto;
 import by.osinovi.orderservice.entity.OrderItem;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;

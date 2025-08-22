@@ -1,7 +1,7 @@
 package by.osinovi.orderservice.service.impl;
 
-import by.osinovi.orderservice.dto.orderItem.OrderItemRequestDto;
-import by.osinovi.orderservice.dto.orderItem.OrderItemResponseDto;
+import by.osinovi.orderservice.dto.order_item.OrderItemRequestDto;
+import by.osinovi.orderservice.dto.order_item.OrderItemResponseDto;
 import by.osinovi.orderservice.entity.Order;
 import by.osinovi.orderservice.entity.OrderItem;
 import by.osinovi.orderservice.exception.NotFoundException;
@@ -14,7 +14,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
