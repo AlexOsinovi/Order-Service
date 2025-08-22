@@ -206,7 +206,8 @@ class OrderControllerIntegrationTests {
         Item item = createTestItem();
         OrderItemRequestDto itemReq = new OrderItemRequestDto(item.getId(), 2);
         OrderRequestDto request = new OrderRequestDto(200L, "PAID", LocalDate.now(), List.of(itemReq));
-        Long orderId2 = Long.valueOf(given()
+
+        given()
                 .contentType(ContentType.JSON)
                 .body(request)
                 .when()
@@ -214,7 +215,7 @@ class OrderControllerIntegrationTests {
                 .then()
                 .statusCode(HttpStatus.CREATED.value())
                 .extract()
-                .path("order.id").toString());
+                .path("order.id");
 
         given()
                 .contentType(ContentType.JSON)
@@ -258,6 +259,7 @@ class OrderControllerIntegrationTests {
         Item item2 = createTestItem();
         OrderItemRequestDto itemReq2 = new OrderItemRequestDto(item2.getId(), 1);
         OrderRequestDto request2 = new OrderRequestDto(200L, "NEW", LocalDate.now(), List.of(itemReq2));
+
         given()
                 .contentType(ContentType.JSON)
                 .body(request2)
