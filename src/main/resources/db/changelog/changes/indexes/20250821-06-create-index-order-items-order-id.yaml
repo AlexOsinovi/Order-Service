@@ -1,0 +1,17 @@
+databaseChangeLog:
+  - changeSet:
+      id: 20250821-07
+      author: aleksei osinovi
+      comment: Create index on order_items table for order_id
+      changes:
+        - createIndex:
+            indexName: idx_order_items_order_id
+            tableName: order_items
+            columns:
+              - column:
+                  name: order_id
+            unique: false
+      rollback:
+        - dropIndex:
+            indexName: idx_order_items_order_id
+            tableName: order_items

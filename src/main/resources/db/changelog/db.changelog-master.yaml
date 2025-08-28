@@ -1,0 +1,18 @@
+databaseChangeLog:
+  - include:
+        file: db/changelog/changes/schema/20250821-01-create-orders-table.yaml
+  - include:
+        file: db/changelog/changes/indexes/20250821-02-create-index-orders-user-id.yaml
+  - include:
+      file: db/changelog/changes/schema/20250821-03-create-items-table.yaml
+  - include:
+      file: db/changelog/changes/indexes/20250821-04-create-index-items-name.yaml
+  - include:
+      file: db/changelog/changes/schema/20250821-05-create-order-items-table.yaml
+  - include:
+      file: db/changelog/changes/indexes/20250821-06-create-index-order-items-order-id.yaml
+  - include:
+      file: db/changelog/changes/indexes/20250821-07-create-index-order-items-item-id.yaml
+
+
+
