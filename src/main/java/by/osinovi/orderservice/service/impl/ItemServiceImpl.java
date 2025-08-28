@@ -3,6 +3,7 @@ package by.osinovi.orderservice.service.impl;
 import by.osinovi.orderservice.dto.item.ItemRequestDto;
 import by.osinovi.orderservice.dto.item.ItemResponseDto;
 import by.osinovi.orderservice.entity.Item;
+import by.osinovi.orderservice.exception.NotFoundException;
 import by.osinovi.orderservice.mapper.ItemMapper;
 import by.osinovi.orderservice.repository.ItemRepository;
 import by.osinovi.orderservice.service.ItemService;
@@ -31,7 +32,7 @@ public class ItemServiceImpl implements ItemService {
 
     @Override
     public ItemResponseDto getItemById(Long id) {
-        Item item = itemRepository.findById(id).orElseThrow(() -> new RuntimeException("Item not found"));
+        Item item = itemRepository.findById(id).orElseThrow(() -> new NotFoundException("Item with ID " + id + " not found"));
         return itemMapper.toResponse(item);
     }
 
@@ -45,7 +46,7 @@ public class ItemServiceImpl implements ItemService {
     @Override
     @Transactional
     public ItemResponseDto updateItem(Long id, ItemRequestDto itemRequestDto) {
-        Item existing = itemRepository.findById(id).orElseThrow(() -> new RuntimeException("Item not found"));
+        Item existing = itemRepository.findById(id).orElseThrow(() -> new NotFoundException("Item with ID " + id + " not found"));
         existing.setName(itemRequestDto.getName());
         existing.setPrice(itemRequestDto.getPrice());
         Item updated = itemRepository.save(existing);
@@ -55,6 +56,9 @@ public class ItemServiceImpl implements ItemService {
     @Override
     @Transactional
     public void deleteItem(Long id) {
+        if (!itemRepository.existsById(id)) {
+            throw new NotFoundException("Item with ID " + id + " not found");
+        }
         itemRepository.deleteById(id);
     }
 }
