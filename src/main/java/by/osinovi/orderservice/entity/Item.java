@@ -29,4 +29,8 @@ public class Item {
 
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal price;
+
+    public Item(Long id) {
+        this.id = id;
+    }
 }
