@@ -1,0 +1,46 @@
+services:
+  postgres:
+    image: 'postgres:15-alpine'
+    container_name: 'postgres'
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: order_service_db
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    env_file:
+      - .env
+    networks:
+      - order_network
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d order_service_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  app:
+    build: .
+    container_name: 'order_service'
+    ports:
+      - '8082:8080'
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/order_service_db
+      SPRING_DATASOURCE_USERNAME: ${DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+    env_file:
+      - .env
+    networks:
+      - order_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+networks:
+  order_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
