@@ -44,7 +44,7 @@ public class OrderController {
     @GetMapping("/statuses")
     public ResponseEntity<List<OrderWithUserResponseDto>> getOrdersByStatuses(@RequestParam List<String> statuses) {
         if (statuses == null || statuses.isEmpty()) {
-            throw new ValidationException("Список статусов не может быть пустым");
+            throw new ValidationException("The status list cannot be empty");
         }
         return ResponseEntity.status(HttpStatus.OK).body(orderService.getOrdersByStatuses(statuses));
     }
