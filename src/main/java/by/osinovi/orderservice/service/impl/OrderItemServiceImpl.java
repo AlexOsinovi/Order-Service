@@ -1,7 +1,7 @@
 package by.osinovi.orderservice.service.impl;
 
-import by.osinovi.orderservice.dto.orderItem.OrderItemRequestDto;
-import by.osinovi.orderservice.dto.orderItem.OrderItemResponseDto;
+import by.osinovi.orderservice.dto.order_item.OrderItemRequestDto;
+import by.osinovi.orderservice.dto.order_item.OrderItemResponseDto;
 import by.osinovi.orderservice.entity.Order;
 import by.osinovi.orderservice.entity.OrderItem;
 import by.osinovi.orderservice.exception.NotFoundException;
@@ -10,23 +10,18 @@ import by.osinovi.orderservice.repository.OrderItemRepository;
 import by.osinovi.orderservice.repository.OrderRepository;
 import by.osinovi.orderservice.service.OrderItemService;
 import jakarta.transaction.Transactional;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class OrderItemServiceImpl implements OrderItemService {
 
-    @Autowired
-    private OrderItemRepository orderItemRepository;
-
-    @Autowired
-    private OrderRepository orderRepository;
-
-    @Autowired
-    private OrderItemMapper orderItemMapper;
+    private final OrderItemRepository orderItemRepository;
+    private final OrderRepository orderRepository;
+    private final OrderItemMapper orderItemMapper;
 
     @Override
     public OrderItemResponseDto createOrderItem(OrderItemRequestDto orderItemRequestDto, Long orderId) {
@@ -47,7 +42,7 @@ public class OrderItemServiceImpl implements OrderItemService {
     public List<OrderItemResponseDto> getOrderItemsByOrderId(Long orderId) {
         return orderItemRepository.findByOrderId(orderId).stream()
                 .map(orderItemMapper::toResponse)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override

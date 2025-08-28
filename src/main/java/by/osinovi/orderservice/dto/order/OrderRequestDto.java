@@ -1,6 +1,6 @@
 package by.osinovi.orderservice.dto.order;
 
-import by.osinovi.orderservice.dto.orderItem.OrderItemRequestDto;
+import by.osinovi.orderservice.dto.order_item.OrderItemRequestDto;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;

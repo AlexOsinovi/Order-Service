@@ -1,4 +1,4 @@
-package by.osinovi.orderservice.dto.userInfo;
+package by.osinovi.orderservice.dto.user_info;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

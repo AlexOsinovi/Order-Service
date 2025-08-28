@@ -1,44 +1,38 @@
 package by.osinovi.orderservice.service.impl;
 
-import by.osinovi.orderservice.dto.userInfo.UserInfoResponseDto;
+import by.osinovi.orderservice.client.UserClient;
+import by.osinovi.orderservice.dto.user_info.UserInfoResponseDto;
 import by.osinovi.orderservice.exception.NotFoundException;
 import by.osinovi.orderservice.service.UserInfoService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
+import feign.FeignException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.RestTemplate;
 
 @Service
+@RequiredArgsConstructor
 public class UserInfoServiceImpl implements UserInfoService {
 
-    @Autowired
-    private RestTemplate restTemplate;
-
-    @Value("${user.service.url}")
-    private String userServiceUrl;
+    private final UserClient userClient;
 
     @Override
     public UserInfoResponseDto getUserInfoById(Long userId) {
-        String url = userServiceUrl + "/" + userId;
         try {
-            return restTemplate.getForObject(url, UserInfoResponseDto.class);
-        } catch (HttpClientErrorException.NotFound e) {
+            return userClient.getUserInfoById(userId);
+        } catch (FeignException.NotFound e) {
             throw new NotFoundException("User with ID " + userId + " not found");
         } catch (Exception e) {
-            throw new RuntimeException("Error getting user information by ID: " + userId, e);
+            throw new RuntimeException("Error getting user by ID: " + userId, e);
         }
     }
 
     @Override
     public UserInfoResponseDto getUserInfoByEmail(String email) {
-        String url = userServiceUrl + "email/" + email;
         try {
-            return restTemplate.getForObject(url, UserInfoResponseDto.class);
-        } catch (HttpClientErrorException.NotFound e) {
+            return userClient.getUserInfoByEmail(email);
+        } catch (FeignException.NotFound e) {
             throw new NotFoundException("User with email " + email + " not found");
         } catch (Exception e) {
-            throw new RuntimeException("Error getting user information by email: " + email, e);
+            throw new RuntimeException("Error getting user by email: " + email, e);
         }
     }
 }

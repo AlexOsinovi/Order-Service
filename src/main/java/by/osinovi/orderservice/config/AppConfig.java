@@ -1,13 +1,9 @@
 package by.osinovi.orderservice.config;
 
-import org.springframework.context.annotation.Bean;
+import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.client.RestTemplate;
 
 @Configuration
+@EnableFeignClients(basePackages = "by.osinovi.orderservice.client")
 public class AppConfig {
-    @Bean
-    public RestTemplate restTemplate() {
-        return new RestTemplate();
-    }
 }

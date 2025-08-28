@@ -1,4 +1,4 @@
-package by.osinovi.orderservice.dto.orderItem;
+package by.osinovi.orderservice.dto.order_item;
 
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;

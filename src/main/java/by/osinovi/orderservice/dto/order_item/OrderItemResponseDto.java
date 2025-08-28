@@ -1,4 +1,4 @@
-package by.osinovi.orderservice.dto.orderItem;
+package by.osinovi.orderservice.dto.order_item;
 
 import by.osinovi.orderservice.dto.item.ItemResponseDto;
 import lombok.AllArgsConstructor;

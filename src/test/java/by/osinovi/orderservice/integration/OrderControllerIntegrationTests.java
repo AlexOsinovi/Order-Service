@@ -1,7 +1,7 @@
 package by.osinovi.orderservice.integration;
 
 import by.osinovi.orderservice.dto.order.OrderRequestDto;
-import by.osinovi.orderservice.dto.orderItem.OrderItemRequestDto;
+import by.osinovi.orderservice.dto.order_item.OrderItemRequestDto;
 import by.osinovi.orderservice.entity.Item;
 import by.osinovi.orderservice.repository.ItemRepository;
 import by.osinovi.orderservice.repository.OrderItemRepository;
@@ -31,13 +31,12 @@ import java.util.List;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
 import static com.github.tomakehurst.wiremock.client.WireMock.get;
-
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.anyOf;
+import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
-import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.anyOf;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Testcontainers
@@ -206,7 +205,8 @@ class OrderControllerIntegrationTests {
         Item item = createTestItem();
         OrderItemRequestDto itemReq = new OrderItemRequestDto(item.getId(), 2);
         OrderRequestDto request = new OrderRequestDto(200L, "PAID", LocalDate.now(), List.of(itemReq));
-        Long orderId2 = Long.valueOf(given()
+
+        given()
                 .contentType(ContentType.JSON)
                 .body(request)
                 .when()
@@ -214,7 +214,7 @@ class OrderControllerIntegrationTests {
                 .then()
                 .statusCode(HttpStatus.CREATED.value())
                 .extract()
-                .path("order.id").toString());
+                .path("order.id");
 
         given()
                 .contentType(ContentType.JSON)
@@ -258,6 +258,7 @@ class OrderControllerIntegrationTests {
         Item item2 = createTestItem();
         OrderItemRequestDto itemReq2 = new OrderItemRequestDto(item2.getId(), 1);
         OrderRequestDto request2 = new OrderRequestDto(200L, "NEW", LocalDate.now(), List.of(itemReq2));
+
         given()
                 .contentType(ContentType.JSON)
                 .body(request2)
