@@ -1,48 +1,44 @@
 package by.osinovi.orderservice.service;
 
+import by.osinovi.orderservice.client.UserClient;
 import by.osinovi.orderservice.dto.user_info.UserInfoResponseDto;
 import by.osinovi.orderservice.exception.NotFoundException;
 import by.osinovi.orderservice.service.impl.UserInfoServiceImpl;
+import feign.FeignException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.RestTemplate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.when;
 
 class UserInfoServiceImplTests {
 
 	@Mock
-	private RestTemplate restTemplate;
+	private UserClient userClient;
 
 	@InjectMocks
 	private UserInfoServiceImpl service;
 
 	@BeforeEach
-	void setUp() throws Exception {
+	void setUp() {
 		MockitoAnnotations.openMocks(this);
-		var urlField = UserInfoServiceImpl.class.getDeclaredField("userServiceUrl");
-		urlField.setAccessible(true);
-		urlField.set(service, "http://user-service");
 	}
 
 	@Test
 	void getUserInfoById_success() {
-		UserInfoResponseDto dto = new UserInfoResponseDto(1L, "N","S", null, "e");
-		when(restTemplate.getForObject("http://user-service/1", UserInfoResponseDto.class)).thenReturn(dto);
+		UserInfoResponseDto dto = new UserInfoResponseDto(1L, "N", "S", null, "e");
+		when(userClient.getUserInfoById(1L)).thenReturn(dto);
 		var result = service.getUserInfoById(1L);
 		assertThat(result.getId()).isEqualTo(1L);
 	}
 
 	@Test
 	void getUserInfoById_notFound() {
-		when(restTemplate.getForObject("http://user-service/2", UserInfoResponseDto.class))
-				.thenThrow(HttpClientErrorException.NotFound.class);
+		when(userClient.getUserInfoById(2L)).thenThrow(FeignException.NotFound.class);
 		assertThatThrownBy(() -> service.getUserInfoById(2L))
 				.isInstanceOf(NotFoundException.class)
 				.hasMessageContaining("User with ID 2 not found");
@@ -50,25 +46,23 @@ class UserInfoServiceImplTests {
 
 	@Test
 	void getUserInfoById_runtime() {
-		when(restTemplate.getForObject("http://user-service/3", UserInfoResponseDto.class))
-				.thenThrow(new RuntimeException("boom"));
+		when(userClient.getUserInfoById(3L)).thenThrow(new RuntimeException("boom"));
 		assertThatThrownBy(() -> service.getUserInfoById(3L))
 				.isInstanceOf(RuntimeException.class)
-				.hasMessageContaining("Error getting user information by ID: 3");
+				.hasMessageContaining("Error getting user by ID: 3");
 	}
 
 	@Test
 	void getUserInfoByEmail_success() {
-		UserInfoResponseDto dto = new UserInfoResponseDto(1L, "N","S", null, "a@b.c");
-		when(restTemplate.getForObject("http://user-serviceemail/a@b.c", UserInfoResponseDto.class)).thenReturn(dto);
+		UserInfoResponseDto dto = new UserInfoResponseDto(1L, "N", "S", null, "a@b.c");
+		when(userClient.getUserInfoByEmail("a@b.c")).thenReturn(dto);
 		var result = service.getUserInfoByEmail("a@b.c");
 		assertThat(result.getEmail()).isEqualTo("a@b.c");
 	}
 
 	@Test
 	void getUserInfoByEmail_notFound() {
-		when(restTemplate.getForObject("http://user-serviceemail/x@b.c", UserInfoResponseDto.class))
-				.thenThrow(HttpClientErrorException.NotFound.class);
+		when(userClient.getUserInfoByEmail("x@b.c")).thenThrow(FeignException.NotFound.class);
 		assertThatThrownBy(() -> service.getUserInfoByEmail("x@b.c"))
 				.isInstanceOf(NotFoundException.class)
 				.hasMessageContaining("User with email x@b.c not found");
@@ -76,10 +70,9 @@ class UserInfoServiceImplTests {
 
 	@Test
 	void getUserInfoByEmail_runtime() {
-		when(restTemplate.getForObject("http://user-serviceemail/z@b.c", UserInfoResponseDto.class))
-				.thenThrow(new RuntimeException("boom"));
+		when(userClient.getUserInfoByEmail("z@b.c")).thenThrow(new RuntimeException("boom"));
 		assertThatThrownBy(() -> service.getUserInfoByEmail("z@b.c"))
 				.isInstanceOf(RuntimeException.class)
-				.hasMessageContaining("Error getting user information by email: z@b.c");
+				.hasMessageContaining("Error getting user by email: z@b.c");
 	}
-} 
+}
