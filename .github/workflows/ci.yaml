@@ -66,13 +66,13 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ secrets.DOCKERHUB_USERNAME }}/user-service
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/order-service
           tags: |
             type=raw,value=latest
             type=sha
 
       - name: Build and Push Docker Image
-        uses: docker/build-push-action@v6.18.0
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: true
