@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -48,10 +49,15 @@ public class OrderServiceImpl implements OrderService {
     public List<OrderWithUserResponseDto> getAllOrders() {
         return orderRepository.findAll().stream()
                 .map(order -> {
-                    OrderResponseDto orderResponse = orderMapper.toResponse(order);
-                    UserInfoResponseDto user = userInfoService.getUserInfoById(order.getUserId());
-                    return new OrderWithUserResponseDto(orderResponse, user);
+                    try {
+                        OrderResponseDto orderResponse = orderMapper.toResponse(order);
+                        UserInfoResponseDto user = userInfoService.getUserInfoById(order.getUserId());
+                        return new OrderWithUserResponseDto(orderResponse, user);
+                    } catch (NotFoundException e) {
+                        return null;
+                    }
                 })
+                .filter(Objects::nonNull)
                 .toList();
     }
 
@@ -59,10 +65,15 @@ public class OrderServiceImpl implements OrderService {
     public List<OrderWithUserResponseDto> getOrdersByStatuses(List<String> statuses) {
         return orderRepository.findByStatuses(statuses).stream()
                 .map(order -> {
-                    OrderResponseDto orderResponse = orderMapper.toResponse(order);
-                    UserInfoResponseDto user = userInfoService.getUserInfoById(order.getUserId());
-                    return new OrderWithUserResponseDto(orderResponse, user);
+                    try {
+                        OrderResponseDto orderResponse = orderMapper.toResponse(order);
+                        UserInfoResponseDto user = userInfoService.getUserInfoById(order.getUserId());
+                        return new OrderWithUserResponseDto(orderResponse, user);
+                    } catch (NotFoundException e) {
+                        return null;
+                    }
                 })
+                .filter(Objects::nonNull)
                 .toList();
     }
 
