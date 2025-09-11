@@ -16,7 +16,7 @@ public class PaymentConsumer {
 
     @KafkaListener(topics = "${spring.kafka.topics.payments}", groupId = "order-group",
             containerFactory = "paymentListenerContainerFactory")
-    public void handleCreatePayment(PaymentMessage paymentMessage, Acknowledgment ack) {
+    public void handleCreatePayment(PaymentMessage paymentMessage) {
         try {
             switch (paymentMessage.getStatus()) {
                 case "CREATED":
@@ -28,7 +28,6 @@ public class PaymentConsumer {
                 default:
                     log.warn("No processing for payment status: {}", paymentMessage.getStatus());
             }
-            ack.acknowledge();
         } catch (Exception e) {
             log.error("Error handling CREATE_PAYMENT for orderId: {}", paymentMessage.getOrderId(), e);
             throw new RuntimeException("Failed to handle CREATE_PAYMENT", e);

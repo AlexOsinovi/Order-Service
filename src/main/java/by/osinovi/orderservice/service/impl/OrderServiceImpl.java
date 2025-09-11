@@ -41,9 +41,10 @@ public class OrderServiceImpl implements OrderService {
         Order saved = orderRepository.save(order);
         OrderResponseDto orderResponse = orderMapper.toResponse(saved);
 
+        UserInfoResponseDto user = userInfoService.getUserInfoById(saved.getUserId());
+
         orderProducer.sendCreateOrderEvent(orderMapper.toMessage(saved));
 
-        UserInfoResponseDto user = userInfoService.getUserInfoById(saved.getUserId());
         return new OrderWithUserResponseDto(orderResponse, user);
     }
 
