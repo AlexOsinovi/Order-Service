@@ -1,0 +1,14 @@
+databaseChangeLog:
+  - changeSet:
+      id: 20250906-01
+      author: aleksei osinovi
+      comment: Create column payment_id in orders
+      changes:
+        - addColumn:
+            tableName: orders
+            columns:
+              - column:
+                  name: payment_id
+                  type: UUID
+                  constraints:
+                    nullable: true

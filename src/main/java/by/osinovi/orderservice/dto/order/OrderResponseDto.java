@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Data
 @NoArgsConstructor
@@ -15,6 +16,7 @@ import java.util.List;
 public class OrderResponseDto {
     private Long id;
     private Long userId;
+    private UUID paymentId;
     private String status;
     private LocalDate creationDate;
     private List<OrderItemResponseDto> orderItems = new ArrayList<>();

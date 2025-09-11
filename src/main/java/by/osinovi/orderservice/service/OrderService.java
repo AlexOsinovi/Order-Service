@@ -1,5 +1,6 @@
 package by.osinovi.orderservice.service;
 
+import by.osinovi.orderservice.dto.message.PaymentMessage;
 import by.osinovi.orderservice.dto.order.OrderRequestDto;
 import by.osinovi.orderservice.dto.order.OrderWithUserResponseDto;
 
@@ -12,4 +13,6 @@ public interface OrderService {
     List<OrderWithUserResponseDto> getOrdersByStatuses(List<String> statuses);
     OrderWithUserResponseDto updateOrder(Long id, OrderRequestDto orderRequestDto);
     void deleteOrder(Long id);
+    void addPaymentId(PaymentMessage paymentMessage);
+    void processSuccessPayment(PaymentMessage paymentMessage);
 }

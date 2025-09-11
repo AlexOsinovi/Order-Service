@@ -16,6 +16,7 @@ import lombok.Setter;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Entity
 @Table(name = "orders")
@@ -36,6 +37,9 @@ public class Order {
 
     @Column(name = "creation_date", nullable = false)
     private LocalDate creationDate;
+
+    @Column(name = "payment_id")
+    private UUID paymentId;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItem> orderItems = new ArrayList<>();
