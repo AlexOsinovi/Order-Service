@@ -12,7 +12,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PaymentMessage {
-    private UUID paymentId;
+    private UUID id;
     private Long orderId;
     private Long userId;
     private String status;

@@ -2,10 +2,12 @@ package by.osinovi.orderservice.service.impl;
 
 import by.osinovi.orderservice.dto.order_item.OrderItemRequestDto;
 import by.osinovi.orderservice.dto.order_item.OrderItemResponseDto;
+import by.osinovi.orderservice.entity.Item;
 import by.osinovi.orderservice.entity.Order;
 import by.osinovi.orderservice.entity.OrderItem;
 import by.osinovi.orderservice.exception.NotFoundException;
 import by.osinovi.orderservice.mapper.OrderItemMapper;
+import by.osinovi.orderservice.repository.ItemRepository;
 import by.osinovi.orderservice.repository.OrderItemRepository;
 import by.osinovi.orderservice.repository.OrderRepository;
 import by.osinovi.orderservice.service.OrderItemService;
@@ -51,7 +53,7 @@ public class OrderItemServiceImpl implements OrderItemService {
         OrderItem existing = orderItemRepository.findById(id).orElseThrow(() -> new NotFoundException("Order item with ID " + id + " not found"));
         existing.setQuantity(orderItemRequestDto.getQuantity());
         if (!existing.getItem().getId().equals(orderItemRequestDto.getItemId())) {
-            existing.setItem(new by.osinovi.orderservice.entity.Item(orderItemRequestDto.getItemId()));
+            existing.setItem(existing.getItem());
         }
         OrderItem updated = orderItemRepository.save(existing);
         return orderItemMapper.toResponse(updated);

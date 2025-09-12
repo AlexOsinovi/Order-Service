@@ -13,6 +13,5 @@ public interface OrderService {
     List<OrderWithUserResponseDto> getOrdersByStatuses(List<String> statuses);
     OrderWithUserResponseDto updateOrder(Long id, OrderRequestDto orderRequestDto);
     void deleteOrder(Long id);
-    void addPaymentId(PaymentMessage paymentMessage);
-    void processSuccessPayment(PaymentMessage paymentMessage);
+    void processPayment(PaymentMessage paymentMessage);
 }

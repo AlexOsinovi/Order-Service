@@ -16,8 +16,13 @@ public interface OrderMapper {
 
     Order toEntity(OrderRequestDto orderRequest);
 
+
     OrderResponseDto toResponse(Order order);
 
     @Mapping(target = "orderId", source = "id")
+    @Mapping(target = "totalAmount", expression = "java(order.getOrderItems().stream()" +
+            ".filter(item -> item.getItem() != null && item.getItem().getPrice() != null)" +
+            ".mapToDouble(item -> item.getItem().getPrice().multiply(new java.math.BigDecimal(item.getQuantity())).doubleValue())" +
+            ".sum())")
     OrderMessage toMessage(Order order);
 }

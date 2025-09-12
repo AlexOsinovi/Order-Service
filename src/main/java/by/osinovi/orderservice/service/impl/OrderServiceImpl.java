@@ -20,7 +20,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Objects;
-import java.util.UUID;
 
 @Slf4j
 @Service
@@ -38,12 +37,15 @@ public class OrderServiceImpl implements OrderService {
     public OrderWithUserResponseDto createOrder(OrderRequestDto orderRequestDto) {
         Order order = orderMapper.toEntity(orderRequestDto);
         order.getOrderItems().forEach(item -> item.setOrder(order));
+        order.setStatus("CREATED");
+
         Order saved = orderRepository.save(order);
-        OrderResponseDto orderResponse = orderMapper.toResponse(saved);
+
+        orderProducer.sendCreateOrderEvent(orderMapper.toMessage(saved));
 
         UserInfoResponseDto user = userInfoService.getUserInfoById(saved.getUserId());
 
-        orderProducer.sendCreateOrderEvent(orderMapper.toMessage(saved));
+        OrderResponseDto orderResponse = orderMapper.toResponse(saved);
 
         return new OrderWithUserResponseDto(orderResponse, user);
     }
@@ -93,7 +95,6 @@ public class OrderServiceImpl implements OrderService {
     public OrderWithUserResponseDto updateOrder(Long id, OrderRequestDto orderRequestDto) {
         Order existing = orderRepository.findById(id).orElseThrow(() -> new NotFoundException("Order with ID " + id + " not found"));
         existing.setUserId(orderRequestDto.getUserId());
-        existing.setStatus(orderRequestDto.getStatus());
         existing.setCreationDate(orderRequestDto.getCreationDate());
         existing.getOrderItems().clear();
         orderRequestDto.getOrderItems().stream()
@@ -103,13 +104,18 @@ public class OrderServiceImpl implements OrderService {
                     existing.getOrderItems().add(item);
                 });
         Order updated = orderRepository.save(existing);
+
+        orderProducer.sendCreateOrderEvent(orderMapper.toMessage(updated));
+
+        updated.setStatus("CHANGED");
         OrderResponseDto orderResponse = orderMapper.toResponse(updated);
         UserInfoResponseDto user = userInfoService.getUserInfoById(updated.getUserId());
+
+
         return new OrderWithUserResponseDto(orderResponse, user);
     }
 
     @Override
-    @Transactional
     public void deleteOrder(Long id) {
         if (!orderRepository.existsById(id)) {
             throw new NotFoundException("Order with ID " + id + " not found");
@@ -119,26 +125,12 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional
-    public void addPaymentId(PaymentMessage paymentMessage) {
+    public void processPayment(PaymentMessage paymentMessage) {
         orderRepository.findById(paymentMessage.getOrderId()).ifPresentOrElse(order -> {
-            if (order.getPaymentId() == null) {
-                order.setPaymentId(paymentMessage.getPaymentId());
-                order.setStatus("TO_PAY");
-                orderRepository.save(order);
-                log.info("Attached payment with id {} to order with id {}", paymentMessage.getPaymentId(), paymentMessage.getOrderId());
-            } else {
-                log.warn("Payment with id {} already attached to order with id {}", paymentMessage.getPaymentId(), paymentMessage.getOrderId());
-            }
-        }, () -> log.error("Cannot find order with id {} for attaching payment", paymentMessage.getOrderId()));
-    }
-
-    @Override
-    @Transactional
-    public void processSuccessPayment(PaymentMessage paymentMessage) {
-        orderRepository.findById(paymentMessage.getOrderId()).ifPresentOrElse(order -> {
-            order.setStatus("IN_PROGRESS");
+            order.setStatus(paymentMessage.getStatus().equals("SUCCESS") ? "PAID" : "FAILED");
+            order.setPaymentId(paymentMessage.getId());
             orderRepository.save(order);
-            log.info("Order with id {} was successfully paid", paymentMessage.getOrderId());
+            log.info("Updated order {} with status {}", paymentMessage.getOrderId(), order.getStatus());
         }, () -> log.error("Cannot find order with id {} for starting processing", paymentMessage.getOrderId()));
     }
 }
