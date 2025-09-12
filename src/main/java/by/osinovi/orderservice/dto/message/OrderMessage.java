@@ -5,6 +5,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
+
 
 @Getter
 @Setter
@@ -13,5 +15,5 @@ import lombok.Setter;
 public class OrderMessage {
     private Long orderId;
     private Long userId;
-    private Double totalAmount;
+    private BigDecimal totalAmount;
 }

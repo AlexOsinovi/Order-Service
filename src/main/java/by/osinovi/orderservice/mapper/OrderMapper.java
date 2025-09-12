@@ -22,7 +22,7 @@ public interface OrderMapper {
     @Mapping(target = "orderId", source = "id")
     @Mapping(target = "totalAmount", expression = "java(order.getOrderItems().stream()" +
             ".filter(item -> item.getItem() != null && item.getItem().getPrice() != null)" +
-            ".mapToDouble(item -> item.getItem().getPrice().multiply(new java.math.BigDecimal(item.getQuantity())).doubleValue())" +
-            ".sum())")
+            ".map(item -> item.getItem().getPrice().multiply(new java.math.BigDecimal(item.getQuantity())))" +
+            ".reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add))")
     OrderMessage toMessage(Order order);
 }
