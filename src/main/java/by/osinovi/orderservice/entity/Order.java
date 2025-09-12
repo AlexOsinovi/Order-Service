@@ -1,5 +1,6 @@
 package by.osinovi.orderservice.entity;
 
+import by.osinovi.orderservice.util.OrderStatus;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -33,7 +34,7 @@ public class Order {
     private Long userId;
 
     @Column(nullable = false, length = 32)
-    private String status;
+    private OrderStatus status;
 
     @Column(name = "creation_date", nullable = false)
     private LocalDate creationDate;

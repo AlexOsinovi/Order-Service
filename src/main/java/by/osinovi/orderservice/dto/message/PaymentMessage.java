@@ -1,5 +1,6 @@
 package by.osinovi.orderservice.dto.message;
 
+import by.osinovi.orderservice.util.PaymentStatus;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -15,6 +16,6 @@ public class PaymentMessage {
     private UUID id;
     private Long orderId;
     private Long userId;
-    private String status;
+    private PaymentStatus status;
     private Double paymentAmount;
 }

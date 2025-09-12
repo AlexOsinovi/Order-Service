@@ -13,6 +13,8 @@ import by.osinovi.orderservice.mapper.OrderMapper;
 import by.osinovi.orderservice.repository.OrderRepository;
 import by.osinovi.orderservice.service.OrderService;
 import by.osinovi.orderservice.service.UserInfoService;
+import by.osinovi.orderservice.util.OrderStatus;
+import by.osinovi.orderservice.util.PaymentStatus;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,7 +39,7 @@ public class OrderServiceImpl implements OrderService {
     public OrderWithUserResponseDto createOrder(OrderRequestDto orderRequestDto) {
         Order order = orderMapper.toEntity(orderRequestDto);
         order.getOrderItems().forEach(item -> item.setOrder(order));
-        order.setStatus("CREATED");
+        order.setStatus(OrderStatus.CREATED);
 
         Order saved = orderRepository.save(order);
 
@@ -107,7 +109,7 @@ public class OrderServiceImpl implements OrderService {
 
         orderProducer.sendCreateOrderEvent(orderMapper.toMessage(updated));
 
-        updated.setStatus("CHANGED");
+        updated.setStatus(OrderStatus.CHANGED);
         OrderResponseDto orderResponse = orderMapper.toResponse(updated);
         UserInfoResponseDto user = userInfoService.getUserInfoById(updated.getUserId());
 
@@ -127,7 +129,7 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public void processPayment(PaymentMessage paymentMessage) {
         orderRepository.findById(paymentMessage.getOrderId()).ifPresentOrElse(order -> {
-            order.setStatus(paymentMessage.getStatus().equals("SUCCESS") ? "PAID" : "FAILED");
+            order.setStatus(paymentMessage.getStatus().equals(PaymentStatus.SUCCESS) ? OrderStatus.PAID : OrderStatus.FAILED);
             order.setPaymentId(paymentMessage.getId());
             orderRepository.save(order);
             log.info("Updated order {} with status {}", paymentMessage.getOrderId(), order.getStatus());
