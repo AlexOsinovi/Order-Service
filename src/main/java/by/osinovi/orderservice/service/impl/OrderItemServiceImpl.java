@@ -2,12 +2,10 @@ package by.osinovi.orderservice.service.impl;
 
 import by.osinovi.orderservice.dto.order_item.OrderItemRequestDto;
 import by.osinovi.orderservice.dto.order_item.OrderItemResponseDto;
-import by.osinovi.orderservice.entity.Item;
 import by.osinovi.orderservice.entity.Order;
 import by.osinovi.orderservice.entity.OrderItem;
 import by.osinovi.orderservice.exception.NotFoundException;
 import by.osinovi.orderservice.mapper.OrderItemMapper;
-import by.osinovi.orderservice.repository.ItemRepository;
 import by.osinovi.orderservice.repository.OrderItemRepository;
 import by.osinovi.orderservice.repository.OrderRepository;
 import by.osinovi.orderservice.service.OrderItemService;

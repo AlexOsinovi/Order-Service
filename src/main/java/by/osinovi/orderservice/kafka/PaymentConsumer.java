@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
 public class PaymentConsumer {
     private final OrderService orderService;
 
-    @KafkaListener(topics = "${spring.kafka.topics.payments}", groupId = "order-group")
+    @KafkaListener(topics = "${spring.kafka.topics.payments}", groupId = "${spring.kafka.consumer.group-id}")
     public void handleCreatePayment(PaymentMessage paymentMessage) {
         log.info("Processing payment {} with status {} for order {}", paymentMessage.getId(), paymentMessage.getStatus(), paymentMessage.getOrderId());
         orderService.processPayment(paymentMessage);
