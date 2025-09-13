@@ -5,6 +5,7 @@ import by.osinovi.orderservice.entity.Item;
 import by.osinovi.orderservice.entity.Order;
 import by.osinovi.orderservice.repository.ItemRepository;
 import by.osinovi.orderservice.repository.OrderRepository;
+import by.osinovi.orderservice.util.OrderStatus;
 import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import org.junit.jupiter.api.BeforeEach;
@@ -245,7 +246,7 @@ class OrderItemControllerIntegrationTests {
     private Order createTestOrder() {
         Order order = new Order();
         order.setUserId(100L);
-        order.setStatus("NEW");
+        order.setStatus(OrderStatus.CREATED);
         order.setCreationDate(LocalDate.now());
         return orderRepository.save(order);
     }

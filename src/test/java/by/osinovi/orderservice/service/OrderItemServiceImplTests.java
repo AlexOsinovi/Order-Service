@@ -49,7 +49,9 @@ class OrderItemServiceImplTests {
 		Order order = new Order();
 		order.setId(7L);
 		OrderItem entity = new OrderItem();
-		entity.setItem(new Item(3L));
+		Item item = new Item();
+		item.setId(3L);
+		entity.setItem(item);
 		entity.setQuantity(2);
 		OrderItem saved = new OrderItem();
 		saved.setId(11L);
@@ -112,11 +114,15 @@ class OrderItemServiceImplTests {
 		OrderItemRequestDto req = new OrderItemRequestDto(99L, 5);
 		OrderItem existing = new OrderItem();
 		existing.setId(12L);
-		existing.setItem(new Item(1L));
+		Item existingItem = new Item();
+		existingItem.setId(1L);
+		existing.setItem(existingItem);
 		existing.setQuantity(1);
 		OrderItem saved = new OrderItem();
 		saved.setId(12L);
-		saved.setItem(new Item(99L));
+		Item savedItem = new Item();
+		savedItem.setId(99L);
+		saved.setItem(savedItem);
 		saved.setQuantity(5);
 		OrderItemResponseDto resp = new OrderItemResponseDto(12L, null, 5);
 

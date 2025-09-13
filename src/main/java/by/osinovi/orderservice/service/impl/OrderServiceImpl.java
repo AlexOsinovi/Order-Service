@@ -1,22 +1,29 @@
 package by.osinovi.orderservice.service.impl;
 
+import by.osinovi.orderservice.dto.message.PaymentMessage;
 import by.osinovi.orderservice.dto.order.OrderRequestDto;
 import by.osinovi.orderservice.dto.order.OrderResponseDto;
 import by.osinovi.orderservice.dto.order.OrderWithUserResponseDto;
 import by.osinovi.orderservice.dto.user_info.UserInfoResponseDto;
 import by.osinovi.orderservice.entity.Order;
 import by.osinovi.orderservice.exception.NotFoundException;
+import by.osinovi.orderservice.kafka.OrderProducer;
 import by.osinovi.orderservice.mapper.OrderItemMapper;
 import by.osinovi.orderservice.mapper.OrderMapper;
 import by.osinovi.orderservice.repository.OrderRepository;
 import by.osinovi.orderservice.service.OrderService;
 import by.osinovi.orderservice.service.UserInfoService;
+import by.osinovi.orderservice.util.OrderStatus;
+import by.osinovi.orderservice.util.PaymentStatus;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Objects;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class OrderServiceImpl implements OrderService {
@@ -25,20 +32,29 @@ public class OrderServiceImpl implements OrderService {
     private final OrderMapper orderMapper;
     private final OrderItemMapper orderItemMapper;
     private final UserInfoService userInfoService;
+    private final OrderProducer orderProducer;
 
     @Override
+    @Transactional
     public OrderWithUserResponseDto createOrder(OrderRequestDto orderRequestDto) {
         Order order = orderMapper.toEntity(orderRequestDto);
         order.getOrderItems().forEach(item -> item.setOrder(order));
+        order.setStatus(OrderStatus.CREATED);
+
         Order saved = orderRepository.save(order);
-        OrderResponseDto orderResponse = orderMapper.toResponse(saved);
+
+        orderProducer.sendCreateOrderEvent(orderMapper.toMessage(saved));
+
         UserInfoResponseDto user = userInfoService.getUserInfoById(saved.getUserId());
+
+        OrderResponseDto orderResponse = orderMapper.toResponse(saved);
+
         return new OrderWithUserResponseDto(orderResponse, user);
     }
 
     @Override
     public OrderWithUserResponseDto getOrderById(Long id) {
-        Order order = orderRepository.findById(id).orElseThrow(() -> new NotFoundException("Order with ID " + id + " not found"));
+        Order order = orderRepository.findById(id).orElseThrow(() -> new NotFoundException("Order with " + id + " not found"));
         OrderResponseDto orderResponse = orderMapper.toResponse(order);
         UserInfoResponseDto user = userInfoService.getUserInfoById(order.getUserId());
         return new OrderWithUserResponseDto(orderResponse, user);
@@ -48,10 +64,15 @@ public class OrderServiceImpl implements OrderService {
     public List<OrderWithUserResponseDto> getAllOrders() {
         return orderRepository.findAll().stream()
                 .map(order -> {
-                    OrderResponseDto orderResponse = orderMapper.toResponse(order);
-                    UserInfoResponseDto user = userInfoService.getUserInfoById(order.getUserId());
-                    return new OrderWithUserResponseDto(orderResponse, user);
+                    try {
+                        OrderResponseDto orderResponse = orderMapper.toResponse(order);
+                        UserInfoResponseDto user = userInfoService.getUserInfoById(order.getUserId());
+                        return new OrderWithUserResponseDto(orderResponse, user);
+                    } catch (NotFoundException e) {
+                        return null;
+                    }
                 })
+                .filter(Objects::nonNull)
                 .toList();
     }
 
@@ -59,10 +80,15 @@ public class OrderServiceImpl implements OrderService {
     public List<OrderWithUserResponseDto> getOrdersByStatuses(List<String> statuses) {
         return orderRepository.findByStatuses(statuses).stream()
                 .map(order -> {
-                    OrderResponseDto orderResponse = orderMapper.toResponse(order);
-                    UserInfoResponseDto user = userInfoService.getUserInfoById(order.getUserId());
-                    return new OrderWithUserResponseDto(orderResponse, user);
+                    try {
+                        OrderResponseDto orderResponse = orderMapper.toResponse(order);
+                        UserInfoResponseDto user = userInfoService.getUserInfoById(order.getUserId());
+                        return new OrderWithUserResponseDto(orderResponse, user);
+                    } catch (NotFoundException e) {
+                        return null;
+                    }
                 })
+                .filter(Objects::nonNull)
                 .toList();
     }
 
@@ -71,7 +97,6 @@ public class OrderServiceImpl implements OrderService {
     public OrderWithUserResponseDto updateOrder(Long id, OrderRequestDto orderRequestDto) {
         Order existing = orderRepository.findById(id).orElseThrow(() -> new NotFoundException("Order with ID " + id + " not found"));
         existing.setUserId(orderRequestDto.getUserId());
-        existing.setStatus(orderRequestDto.getStatus());
         existing.setCreationDate(orderRequestDto.getCreationDate());
         existing.getOrderItems().clear();
         orderRequestDto.getOrderItems().stream()
@@ -81,17 +106,33 @@ public class OrderServiceImpl implements OrderService {
                     existing.getOrderItems().add(item);
                 });
         Order updated = orderRepository.save(existing);
+
+        orderProducer.sendCreateOrderEvent(orderMapper.toMessage(updated));
+
+        updated.setStatus(OrderStatus.CHANGED);
         OrderResponseDto orderResponse = orderMapper.toResponse(updated);
         UserInfoResponseDto user = userInfoService.getUserInfoById(updated.getUserId());
+
+
         return new OrderWithUserResponseDto(orderResponse, user);
     }
 
     @Override
-    @Transactional
     public void deleteOrder(Long id) {
         if (!orderRepository.existsById(id)) {
             throw new NotFoundException("Order with ID " + id + " not found");
         }
         orderRepository.deleteById(id);
+    }
+
+    @Override
+    @Transactional
+    public void processPayment(PaymentMessage paymentMessage) {
+        orderRepository.findById(paymentMessage.getOrderId()).ifPresentOrElse(order -> {
+            order.setStatus(paymentMessage.getStatus().equals(PaymentStatus.SUCCESS) ? OrderStatus.PAID : OrderStatus.FAILED);
+            order.setPaymentId(paymentMessage.getId());
+            orderRepository.save(order);
+            log.info("Updated order {} with status {}", paymentMessage.getOrderId(), order.getStatus());
+        }, () -> log.error("Cannot find order with id {} for starting processing", paymentMessage.getOrderId()));
     }
 }

@@ -17,6 +17,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpStatus;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -37,6 +38,8 @@ import static org.hamcrest.Matchers.anyOf;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doNothing;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Testcontainers
@@ -56,6 +59,9 @@ class OrderControllerIntegrationTests {
 
     @Autowired
     private OrderRepository orderRepository;
+
+    @MockitoBean
+    private by.osinovi.orderservice.kafka.OrderProducer orderProducer;
 
     private static WireMockServer wireMockServer;
 
@@ -87,6 +93,7 @@ class OrderControllerIntegrationTests {
         orderItemRepository.deleteAll();
         orderRepository.deleteAll();
         itemRepository.deleteAll();
+        doNothing().when(orderProducer).sendCreateOrderEvent(any());
     }
 
     @DynamicPropertySource
@@ -97,6 +104,10 @@ class OrderControllerIntegrationTests {
         registry.add("spring.jpa.hibernate.ddl-auto", () -> "create-drop");
         registry.add("spring.liquibase.enabled", () -> "false");
         registry.add("user.service.url", () -> "http://localhost:" + wireMockServer.port());
+        registry.add("spring.kafka.bootstrap-servers", () -> "localhost:9092");
+        registry.add("spring.kafka.topics.orders", () -> "orders-topic");
+        registry.add("spring.kafka.topics.payments", () -> "payments-topic");
+        registry.add("spring.kafka.consumer.group-id", () -> "order-service-group");
     }
 
     @Test
@@ -122,7 +133,7 @@ class OrderControllerIntegrationTests {
         );
 
         OrderItemRequestDto itemReq = new OrderItemRequestDto(item.getId(), 2);
-        OrderRequestDto request = new OrderRequestDto(100L, "NEW", LocalDate.now(), List.of(itemReq));
+        OrderRequestDto request = new OrderRequestDto(100L, LocalDate.now(), List.of(itemReq));
 
         given()
                 .contentType(ContentType.JSON)
@@ -133,7 +144,7 @@ class OrderControllerIntegrationTests {
                 .statusCode(HttpStatus.CREATED.value())
                 .body("order.id", is(notNullValue()))
                 .body("order.userId", is(100))
-                .body("order.status", is("NEW"))
+                .body("order.status", is("CREATED"))
                 .body("user.id", is(100))
                 .body("user.name", is("John"));
     }
@@ -148,7 +159,7 @@ class OrderControllerIntegrationTests {
         );
 
         OrderItemRequestDto itemReq = new OrderItemRequestDto(item.getId(), 1);
-        OrderRequestDto request = new OrderRequestDto(999L, "NEW", LocalDate.now(), List.of(itemReq));
+        OrderRequestDto request = new OrderRequestDto(999L, LocalDate.now(), List.of(itemReq));
 
         given()
                 .contentType(ContentType.JSON)
@@ -170,7 +181,7 @@ class OrderControllerIntegrationTests {
                 .then()
                 .statusCode(HttpStatus.OK.value())
                 .body("order.id", is(orderId.intValue()))
-                .body("order.status", is("NEW"));
+                .body("order.status", is("CREATED"));
     }
 
     @Test
@@ -204,7 +215,7 @@ class OrderControllerIntegrationTests {
 
         Item item = createTestItem();
         OrderItemRequestDto itemReq = new OrderItemRequestDto(item.getId(), 2);
-        OrderRequestDto request = new OrderRequestDto(200L, "PAID", LocalDate.now(), List.of(itemReq));
+        OrderRequestDto request = new OrderRequestDto(200L, LocalDate.now(), List.of(itemReq));
 
         given()
                 .contentType(ContentType.JSON)
@@ -246,7 +257,7 @@ class OrderControllerIntegrationTests {
 
         Item item1 = createTestItem();
         OrderItemRequestDto itemReq1 = new OrderItemRequestDto(item1.getId(), 2);
-        OrderRequestDto request1 = new OrderRequestDto(200L, "PAID", LocalDate.now(), List.of(itemReq1));
+        OrderRequestDto request1 = new OrderRequestDto(200L, LocalDate.now(), List.of(itemReq1));
         given()
                 .contentType(ContentType.JSON)
                 .body(request1)
@@ -257,7 +268,7 @@ class OrderControllerIntegrationTests {
 
         Item item2 = createTestItem();
         OrderItemRequestDto itemReq2 = new OrderItemRequestDto(item2.getId(), 1);
-        OrderRequestDto request2 = new OrderRequestDto(200L, "NEW", LocalDate.now(), List.of(itemReq2));
+        OrderRequestDto request2 = new OrderRequestDto(200L, LocalDate.now(), List.of(itemReq2));
 
         given()
                 .contentType(ContentType.JSON)
@@ -270,11 +281,11 @@ class OrderControllerIntegrationTests {
         given()
                 .contentType(ContentType.JSON)
                 .when()
-                .get("/api/orders/statuses?statuses=NEW&statuses=PAID")
+                .get("/api/orders/statuses?statuses=CREATED&statuses=PAID")
                 .then()
                 .statusCode(HttpStatus.OK.value())
                 .body("size()", greaterThan(0))
-                .body("[0].order.status", anyOf(is("NEW"), is("PAID")));
+                .body("[0].order.status", anyOf(is("CREATED"), is("PAID")));
     }
 
     @Test
@@ -312,7 +323,7 @@ class OrderControllerIntegrationTests {
 
         Item item = createTestItem();
         OrderItemRequestDto itemReq = new OrderItemRequestDto(item.getId(), 3);
-        OrderRequestDto updateRequest = new OrderRequestDto(200L, "PAID", LocalDate.now(), List.of(itemReq));
+        OrderRequestDto updateRequest = new OrderRequestDto(200L, LocalDate.now(), List.of(itemReq));
 
         given()
                 .contentType(ContentType.JSON)
@@ -322,7 +333,7 @@ class OrderControllerIntegrationTests {
                 .then()
                 .statusCode(HttpStatus.OK.value())
                 .body("order.id", is(orderId.intValue()))
-                .body("order.status", is("PAID"))
+                .body("order.status", is("CHANGED"))
                 .body("user.id", is(200));
     }
 
@@ -330,7 +341,7 @@ class OrderControllerIntegrationTests {
     void updateOrder_NonExistentOrder_ReturnsNotFound() {
         Item item = createTestItem();
         OrderItemRequestDto itemReq = new OrderItemRequestDto(item.getId(), 1);
-        OrderRequestDto updateRequest = new OrderRequestDto(1L, "PAID", LocalDate.now(), List.of(itemReq));
+        OrderRequestDto updateRequest = new OrderRequestDto(1L, LocalDate.now(), List.of(itemReq));
 
         given()
                 .contentType(ContentType.JSON)
@@ -399,7 +410,7 @@ class OrderControllerIntegrationTests {
         );
 
         OrderItemRequestDto itemReq = new OrderItemRequestDto(item.getId(), 2);
-        OrderRequestDto request = new OrderRequestDto(100L, "NEW", LocalDate.now(), List.of(itemReq));
+        OrderRequestDto request = new OrderRequestDto(100L, LocalDate.now(), List.of(itemReq));
 
         return Long.valueOf(given()
                 .contentType(ContentType.JSON)
