@@ -42,12 +42,9 @@ class OrderProducerTests {
     void sendCreateOrderEvent_withNullOrderId() {
         OrderMessage orderMessage = new OrderMessage(null, 100L, BigDecimal.valueOf(50.0));
 
-        // This test verifies that the method handles null orderId gracefully
-        // The actual implementation should handle null values appropriately
         try {
             orderProducer.sendCreateOrderEvent(orderMessage);
         } catch (NullPointerException e) {
-            // Expected behavior when orderId is null
             assertThat(e.getMessage()).contains("Cannot invoke \"java.lang.Long.toString()\"");
         }
     }
