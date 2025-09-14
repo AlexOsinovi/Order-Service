@@ -17,4 +17,5 @@ public class OrderProducer {
     public void sendCreateOrderEvent(OrderMessage orderMessage) {
         orderKafkaTemplate.send(ordersTopic, orderMessage.getOrderId().toString(), orderMessage);
     }
+
 }
