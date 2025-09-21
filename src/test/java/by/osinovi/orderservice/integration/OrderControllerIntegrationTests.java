@@ -3,28 +3,22 @@ package by.osinovi.orderservice.integration;
 import by.osinovi.orderservice.dto.order.OrderRequestDto;
 import by.osinovi.orderservice.dto.order_item.OrderItemRequestDto;
 import by.osinovi.orderservice.entity.Item;
+import by.osinovi.orderservice.integration.config.BaseIntegrationTest;
+import by.osinovi.orderservice.kafka.OrderProducer;
 import by.osinovi.orderservice.repository.ItemRepository;
 import by.osinovi.orderservice.repository.OrderItemRepository;
 import by.osinovi.orderservice.repository.OrderRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.github.tomakehurst.wiremock.WireMockServer;
-import com.github.tomakehurst.wiremock.client.WireMock;
-import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpStatus;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -42,11 +36,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@Testcontainers
-class OrderControllerIntegrationTests {
-
-    @LocalServerPort
-    private Integer port;
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
+class OrderControllerIntegrationTests extends BaseIntegrationTest {
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -61,34 +52,10 @@ class OrderControllerIntegrationTests {
     private OrderRepository orderRepository;
 
     @MockitoBean
-    private by.osinovi.orderservice.kafka.OrderProducer orderProducer;
-
-    private static WireMockServer wireMockServer;
-
-    @Container
-    private static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine")
-            .withDatabaseName("order_service_test")
-            .withUsername("postgres")
-            .withPassword("password");
-
-    @BeforeAll
-    static void beforeAll() {
-        wireMockServer = new WireMockServer(0);
-        wireMockServer.start();
-        WireMock.configureFor("localhost", wireMockServer.port());
-    }
-
-    @AfterAll
-    static void afterAll() {
-        if (wireMockServer != null) {
-            wireMockServer.stop();
-        }
-    }
+    private OrderProducer orderProducer;
 
     @BeforeEach
     void setUp() {
-        RestAssured.port = port;
-        RestAssured.enableLoggingOfRequestAndResponseIfValidationFails();
         wireMockServer.resetAll();
         orderItemRepository.deleteAll();
         orderRepository.deleteAll();
@@ -181,7 +148,10 @@ class OrderControllerIntegrationTests {
                 .then()
                 .statusCode(HttpStatus.OK.value())
                 .body("order.id", is(orderId.intValue()))
-                .body("order.status", is("CREATED"));
+                .body("order.userId", is(100))
+                .body("order.status", is("CREATED"))
+                .body("user.id", is(100))
+                .body("user.name", is("John"));
     }
 
     @Test
@@ -196,36 +166,7 @@ class OrderControllerIntegrationTests {
 
     @Test
     void getAllOrders_ReturnsOrdersList() {
-        String userResponse200 = """
-        {
-            "id": 200,
-            "name": "Jane",
-            "surname": "Smith",
-            "birthDate": "1995-05-15",
-            "email": "jane@example.com"
-        }
-        """;
-        wireMockServer.stubFor(
-                get(urlEqualTo("/200"))
-                        .willReturn(aResponse()
-                                .withStatus(200)
-                                .withHeader("Content-Type", "application/json")
-                                .withBody(userResponse200))
-        );
-
-        Item item = createTestItem();
-        OrderItemRequestDto itemReq = new OrderItemRequestDto(item.getId(), 2);
-        OrderRequestDto request = new OrderRequestDto(200L, LocalDate.now(), List.of(itemReq));
-
-        given()
-                .contentType(ContentType.JSON)
-                .body(request)
-                .when()
-                .post("/api/orders")
-                .then()
-                .statusCode(HttpStatus.CREATED.value())
-                .extract()
-                .path("order.id");
+        createTestOrder();
 
         given()
                 .contentType(ContentType.JSON)
