@@ -9,6 +9,8 @@ import org.mapstruct.Mapping;
 import org.mapstruct.MappingConstants;
 import org.mapstruct.ReportingPolicy;
 
+import java.math.BigDecimal;
+
 @Mapper(componentModel = MappingConstants.ComponentModel.SPRING,
         uses = {OrderItemMapper.class},
         unmappedTargetPolicy = ReportingPolicy.IGNORE)
@@ -19,10 +21,6 @@ public interface OrderMapper {
 
     OrderResponseDto toResponse(Order order);
 
-    @Mapping(target = "orderId", source = "id")
-    @Mapping(target = "totalAmount", expression = "java(order.getOrderItems().stream()" +
-            ".filter(item -> item.getItem() != null && item.getItem().getPrice() != null)" +
-            ".map(item -> item.getItem().getPrice().multiply(new java.math.BigDecimal(item.getQuantity())))" +
-            ".reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add))")
-    OrderMessage toMessage(Order order);
+    @Mapping(target = "orderId", source = "order.id")
+    OrderMessage toMessage(Order order, BigDecimal totalAmount);
 }
