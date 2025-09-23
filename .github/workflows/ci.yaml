@@ -24,11 +24,9 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      - name: Build Application
-        run: mvn clean install -DskipTests
-
-      - name: Run Tests with JaCoCo Coverage
-        run: mvn test verify jacoco:report
+      - name: Build and Run Tests with JaCoCo
+        run: |
+          mvn clean test verify jacoco:report -DskipTests=false
 
       - name: SonarQube Code Analysis
         env:
