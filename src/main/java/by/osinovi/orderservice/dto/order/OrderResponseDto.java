@@ -2,6 +2,8 @@ package by.osinovi.orderservice.dto.order;
 
 import by.osinovi.orderservice.dto.order_item.OrderItemResponseDto;
 import by.osinovi.orderservice.util.OrderStatus;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonIncludeProperties;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -16,6 +18,7 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class OrderResponseDto {
     private Long id;
     private Long userId;

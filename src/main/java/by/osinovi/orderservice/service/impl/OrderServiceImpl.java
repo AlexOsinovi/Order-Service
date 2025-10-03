@@ -5,11 +5,14 @@ import by.osinovi.orderservice.dto.order.OrderRequestDto;
 import by.osinovi.orderservice.dto.order.OrderResponseDto;
 import by.osinovi.orderservice.dto.order.OrderWithUserResponseDto;
 import by.osinovi.orderservice.dto.user_info.UserInfoResponseDto;
+import by.osinovi.orderservice.entity.Item;
 import by.osinovi.orderservice.entity.Order;
+import by.osinovi.orderservice.entity.OrderItem;
 import by.osinovi.orderservice.exception.NotFoundException;
 import by.osinovi.orderservice.kafka.OrderProducer;
 import by.osinovi.orderservice.mapper.OrderItemMapper;
 import by.osinovi.orderservice.mapper.OrderMapper;
+import by.osinovi.orderservice.repository.ItemRepository;
 import by.osinovi.orderservice.repository.OrderRepository;
 import by.osinovi.orderservice.service.OrderService;
 import by.osinovi.orderservice.service.UserInfoService;
@@ -23,6 +26,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -30,6 +34,7 @@ import java.util.Objects;
 public class OrderServiceImpl implements OrderService {
 
     private final OrderRepository orderRepository;
+    private final ItemRepository itemRepository;
     private final OrderMapper orderMapper;
     private final OrderItemMapper orderItemMapper;
     private final UserInfoService userInfoService;
@@ -41,6 +46,20 @@ public class OrderServiceImpl implements OrderService {
         Order order = orderMapper.toEntity(orderRequestDto);
         order.getOrderItems().forEach(item -> item.setOrder(order));
         order.setStatus(OrderStatus.CREATED);
+
+        List<OrderItem> processedItems = order.getOrderItems().stream()
+                .peek(orderItem -> {
+                    Item itemFromDb = itemRepository.findById(orderItem.getItem().getId())
+                            .orElseThrow(() -> new NotFoundException("Item not found with id: " + orderItem.getItem().getId()));
+
+                    orderItem.setItem(itemFromDb);
+
+                    orderItem.setOrder(order);
+
+                })
+                .toList();
+
+        order.setOrderItems(processedItems);
 
         Order saved = orderRepository.save(order);
 
