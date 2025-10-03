@@ -26,7 +26,6 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -44,7 +43,6 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public OrderWithUserResponseDto createOrder(OrderRequestDto orderRequestDto) {
         Order order = orderMapper.toEntity(orderRequestDto);
-        order.getOrderItems().forEach(item -> item.setOrder(order));
         order.setStatus(OrderStatus.CREATED);
 
         List<OrderItem> processedItems = order.getOrderItems().stream()
@@ -60,6 +58,7 @@ public class OrderServiceImpl implements OrderService {
                 .toList();
 
         order.setOrderItems(processedItems);
+
 
         Order saved = orderRepository.save(order);
 
@@ -117,26 +116,35 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderWithUserResponseDto updateOrder(Long id, OrderRequestDto orderRequestDto) {
-        Order existing = orderRepository.findById(id).orElseThrow(() -> new NotFoundException("Order with ID " + id + " not found"));
+        Order existing = orderRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Order with ID " + id + " not found"));
+
         existing.setUserId(orderRequestDto.getUserId());
         existing.setCreationDate(orderRequestDto.getCreationDate());
+
         existing.getOrderItems().clear();
-        orderRequestDto.getOrderItems().stream()
+
+        List<OrderItem> newOrderItems = orderRequestDto.getOrderItems().stream()
                 .map(orderItemMapper::toEntity)
-                .forEach(item -> {
-                    item.setOrder(existing);
-                    existing.getOrderItems().add(item);
-                });
+                .peek(newOrderItem -> {
+                    Item itemFromDb = itemRepository.findById(newOrderItem.getItem().getId())
+                            .orElseThrow(() -> new NotFoundException("Item not found with id: " + newOrderItem.getItem().getId()));
+
+                    newOrderItem.setItem(itemFromDb);
+                    newOrderItem.setOrder(existing);
+                })
+                .toList();
+
+        existing.getOrderItems().addAll(newOrderItems);
+
+        existing.setStatus(OrderStatus.CHANGED);
+
         Order updated = orderRepository.save(existing);
 
         BigDecimal totalAmount = calculateTotalAmount(updated);
-
         orderProducer.sendCreateOrderEvent(orderMapper.toMessage(updated, totalAmount));
-
-        updated.setStatus(OrderStatus.CHANGED);
         OrderResponseDto orderResponse = orderMapper.toResponse(updated);
         UserInfoResponseDto user = userInfoService.getUserInfoById(updated.getUserId());
-
 
         return new OrderWithUserResponseDto(orderResponse, user);
     }

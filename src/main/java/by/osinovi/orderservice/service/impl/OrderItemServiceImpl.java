@@ -51,11 +51,16 @@ public class OrderItemServiceImpl implements OrderItemService {
     @Override
     @Transactional
     public OrderItemResponseDto updateOrderItem(Long id, OrderItemRequestDto orderItemRequestDto) {
-        OrderItem existing = orderItemRepository.findById(id).orElseThrow(() -> new NotFoundException("Order item with ID " + id + " not found"));
+        OrderItem existing = orderItemRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Order item with ID " + id + " not found"));
+
         existing.setQuantity(orderItemRequestDto.getQuantity());
+
         if (!existing.getItem().getId().equals(orderItemRequestDto.getItemId())) {
-            existing.setItem(existing.getItem());
+            existing.setItem(itemRepository.findById(orderItemRequestDto.getItemId())
+                    .orElseThrow(() -> new NotFoundException("Item with ID " + orderItemRequestDto.getItemId() + " not found")));
         }
+
         OrderItem updated = orderItemRepository.save(existing);
         return orderItemMapper.toResponse(updated);
     }
