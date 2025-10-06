@@ -5,11 +5,14 @@ import by.osinovi.orderservice.dto.order.OrderRequestDto;
 import by.osinovi.orderservice.dto.order.OrderResponseDto;
 import by.osinovi.orderservice.dto.order.OrderWithUserResponseDto;
 import by.osinovi.orderservice.dto.user_info.UserInfoResponseDto;
+import by.osinovi.orderservice.entity.Item;
 import by.osinovi.orderservice.entity.Order;
+import by.osinovi.orderservice.entity.OrderItem;
 import by.osinovi.orderservice.exception.NotFoundException;
 import by.osinovi.orderservice.kafka.OrderProducer;
 import by.osinovi.orderservice.mapper.OrderItemMapper;
 import by.osinovi.orderservice.mapper.OrderMapper;
+import by.osinovi.orderservice.repository.ItemRepository;
 import by.osinovi.orderservice.repository.OrderRepository;
 import by.osinovi.orderservice.service.OrderService;
 import by.osinovi.orderservice.service.UserInfoService;
@@ -30,6 +33,7 @@ import java.util.Objects;
 public class OrderServiceImpl implements OrderService {
 
     private final OrderRepository orderRepository;
+    private final ItemRepository itemRepository;
     private final OrderMapper orderMapper;
     private final OrderItemMapper orderItemMapper;
     private final UserInfoService userInfoService;
@@ -39,8 +43,22 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public OrderWithUserResponseDto createOrder(OrderRequestDto orderRequestDto) {
         Order order = orderMapper.toEntity(orderRequestDto);
-        order.getOrderItems().forEach(item -> item.setOrder(order));
         order.setStatus(OrderStatus.CREATED);
+
+        List<OrderItem> processedItems = order.getOrderItems().stream()
+                .peek(orderItem -> {
+                    Item itemFromDb = itemRepository.findById(orderItem.getItem().getId())
+                            .orElseThrow(() -> new NotFoundException("Item not found with id: " + orderItem.getItem().getId()));
+
+                    orderItem.setItem(itemFromDb);
+
+                    orderItem.setOrder(order);
+
+                })
+                .toList();
+
+        order.setOrderItems(processedItems);
+
 
         Order saved = orderRepository.save(order);
 
@@ -98,26 +116,35 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderWithUserResponseDto updateOrder(Long id, OrderRequestDto orderRequestDto) {
-        Order existing = orderRepository.findById(id).orElseThrow(() -> new NotFoundException("Order with ID " + id + " not found"));
+        Order existing = orderRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Order with ID " + id + " not found"));
+
         existing.setUserId(orderRequestDto.getUserId());
         existing.setCreationDate(orderRequestDto.getCreationDate());
+
         existing.getOrderItems().clear();
-        orderRequestDto.getOrderItems().stream()
+
+        List<OrderItem> newOrderItems = orderRequestDto.getOrderItems().stream()
                 .map(orderItemMapper::toEntity)
-                .forEach(item -> {
-                    item.setOrder(existing);
-                    existing.getOrderItems().add(item);
-                });
+                .peek(newOrderItem -> {
+                    Item itemFromDb = itemRepository.findById(newOrderItem.getItem().getId())
+                            .orElseThrow(() -> new NotFoundException("Item not found with id: " + newOrderItem.getItem().getId()));
+
+                    newOrderItem.setItem(itemFromDb);
+                    newOrderItem.setOrder(existing);
+                })
+                .toList();
+
+        existing.getOrderItems().addAll(newOrderItems);
+
+        existing.setStatus(OrderStatus.CHANGED);
+
         Order updated = orderRepository.save(existing);
 
         BigDecimal totalAmount = calculateTotalAmount(updated);
-
         orderProducer.sendCreateOrderEvent(orderMapper.toMessage(updated, totalAmount));
-
-        updated.setStatus(OrderStatus.CHANGED);
         OrderResponseDto orderResponse = orderMapper.toResponse(updated);
         UserInfoResponseDto user = userInfoService.getUserInfoById(updated.getUserId());
-
 
         return new OrderWithUserResponseDto(orderResponse, user);
     }

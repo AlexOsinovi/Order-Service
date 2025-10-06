@@ -6,6 +6,7 @@ import by.osinovi.orderservice.entity.Order;
 import by.osinovi.orderservice.entity.OrderItem;
 import by.osinovi.orderservice.exception.NotFoundException;
 import by.osinovi.orderservice.mapper.OrderItemMapper;
+import by.osinovi.orderservice.repository.ItemRepository;
 import by.osinovi.orderservice.repository.OrderItemRepository;
 import by.osinovi.orderservice.repository.OrderRepository;
 import by.osinovi.orderservice.service.OrderItemService;
@@ -20,6 +21,7 @@ import java.util.List;
 public class OrderItemServiceImpl implements OrderItemService {
 
     private final OrderItemRepository orderItemRepository;
+    private final ItemRepository itemRepository;
     private final OrderRepository orderRepository;
     private final OrderItemMapper orderItemMapper;
 
@@ -28,6 +30,7 @@ public class OrderItemServiceImpl implements OrderItemService {
         Order order = orderRepository.findById(orderId).orElseThrow(() -> new NotFoundException("Order with ID " + orderId + " not found"));
         OrderItem orderItem = orderItemMapper.toEntity(orderItemRequestDto);
         orderItem.setOrder(order);
+        orderItem.setItem(itemRepository.findById(orderItem.getItem().getId()).orElseThrow(() -> new NotFoundException("Item with ID " + orderItem.getItem().getId() + " not found")));
         OrderItem saved = orderItemRepository.save(orderItem);
         return orderItemMapper.toResponse(saved);
     }
@@ -48,11 +51,16 @@ public class OrderItemServiceImpl implements OrderItemService {
     @Override
     @Transactional
     public OrderItemResponseDto updateOrderItem(Long id, OrderItemRequestDto orderItemRequestDto) {
-        OrderItem existing = orderItemRepository.findById(id).orElseThrow(() -> new NotFoundException("Order item with ID " + id + " not found"));
+        OrderItem existing = orderItemRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Order item with ID " + id + " not found"));
+
         existing.setQuantity(orderItemRequestDto.getQuantity());
+
         if (!existing.getItem().getId().equals(orderItemRequestDto.getItemId())) {
-            existing.setItem(existing.getItem());
+            existing.setItem(itemRepository.findById(orderItemRequestDto.getItemId())
+                    .orElseThrow(() -> new NotFoundException("Item with ID " + orderItemRequestDto.getItemId() + " not found")));
         }
+
         OrderItem updated = orderItemRepository.save(existing);
         return orderItemMapper.toResponse(updated);
     }

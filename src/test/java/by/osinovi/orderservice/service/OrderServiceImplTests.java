@@ -14,6 +14,7 @@ import by.osinovi.orderservice.exception.NotFoundException;
 import by.osinovi.orderservice.kafka.OrderProducer;
 import by.osinovi.orderservice.mapper.OrderItemMapper;
 import by.osinovi.orderservice.mapper.OrderMapper;
+import by.osinovi.orderservice.repository.ItemRepository;
 import by.osinovi.orderservice.repository.OrderRepository;
 import by.osinovi.orderservice.service.impl.OrderServiceImpl;
 import by.osinovi.orderservice.util.OrderStatus;
@@ -26,6 +27,7 @@ import org.mockito.MockitoAnnotations;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -41,6 +43,9 @@ class OrderServiceImplTests {
 
     @Mock
     private OrderRepository orderRepository;
+
+    @Mock
+    private ItemRepository itemRepository;
 
     @Mock
     private OrderMapper orderMapper;
@@ -164,41 +169,60 @@ class OrderServiceImplTests {
 
     @Test
     void updateOrder_success() {
-        OrderItemRequestDto itemReq = new OrderItemRequestDto(9L, 3);
-        OrderRequestDto req = new OrderRequestDto(300L, LocalDate.now(), List.of(itemReq));
-        Order existing = new Order();
-        existing.setId(55L);
-        existing.setUserId(999L);
-        existing.setStatus(OrderStatus.CREATED);
-        Order saved = new Order();
-        saved.setId(55L);
-        saved.setUserId(300L);
-        saved.setStatus(OrderStatus.CHANGED);
-        Item item = new Item();
-        item.setPrice(BigDecimal.valueOf(30.0));
-        OrderItem orderItem = new OrderItem();
-        orderItem.setItem(item);
-        orderItem.setQuantity(3);
-        saved.setOrderItems(List.of(orderItem));
-        OrderResponseDto orderResp = new OrderResponseDto(55L, 300L, null, OrderStatus.CHANGED, req.getCreationDate(), List.of());
-        UserInfoResponseDto userResp = new UserInfoResponseDto(300L, "N", "S", LocalDate.now(), "e");
-        BigDecimal expectedTotalAmount = BigDecimal.valueOf(90.0); // 30 * 3
-        OrderMessage orderMessage = new OrderMessage(55L, 300L, expectedTotalAmount);
+        // --- ARRANGE ---
+        long orderId = 55L;
+        long newUserId = 300L;
+        long itemId = 9L;
+        int quantity = 3;
 
-        when(orderRepository.findById(55L)).thenReturn(Optional.of(existing));
-        when(orderRepository.save(existing)).thenReturn(saved);
-        when(orderMapper.toResponse(saved)).thenReturn(orderResp);
-        when(orderMapper.toMessage(saved, expectedTotalAmount)).thenReturn(orderMessage);
-        when(userInfoService.getUserInfoById(300L)).thenReturn(userResp);
-        when(orderItemMapper.toEntity(itemReq)).thenReturn(new OrderItem());
+        // Input DTOs
+        OrderItemRequestDto itemRequest = new OrderItemRequestDto(itemId, quantity);
+        OrderRequestDto requestDto = new OrderRequestDto(newUserId, LocalDate.now(), List.of(itemRequest));
 
-        OrderWithUserResponseDto result = orderService.updateOrder(55L, req);
+        Order existingOrder = new Order();
+        existingOrder.setId(orderId);
+        existingOrder.setOrderItems(new ArrayList<>());
 
+        Item itemFromDb = new Item();
+        itemFromDb.setId(itemId);
+        itemFromDb.setPrice(new BigDecimal("30.00"));
+
+        OrderItem mappedOrderItem = new OrderItem();
+        mappedOrderItem.setItem(new Item(itemId, null, null));
+        mappedOrderItem.setQuantity(quantity);
+
+        Order savedOrder = new Order();
+        savedOrder.setId(orderId);
+        savedOrder.setUserId(newUserId);
+        savedOrder.setStatus(OrderStatus.CHANGED);
+        OrderItem finalOrderItem = new OrderItem(null, savedOrder, itemFromDb, quantity);
+        savedOrder.setOrderItems(List.of(finalOrderItem));
+
+        OrderResponseDto orderResponse = new OrderResponseDto(orderId, newUserId, null, OrderStatus.CHANGED, requestDto.getCreationDate(), List.of());
+        UserInfoResponseDto userResponse = new UserInfoResponseDto(newUserId, "N", "S", LocalDate.now(), "e");
+        BigDecimal totalAmount = new BigDecimal("90.00");
+        OrderMessage orderMessage = new OrderMessage(orderId, newUserId, totalAmount);
+
+        when(orderRepository.findById(orderId)).thenReturn(Optional.of(existingOrder));
+        when(itemRepository.findById(itemId)).thenReturn(Optional.of(itemFromDb));
+        when(orderItemMapper.toEntity(itemRequest)).thenReturn(mappedOrderItem);
+        when(orderRepository.save(existingOrder)).thenReturn(savedOrder);
+        when(orderMapper.toResponse(savedOrder)).thenReturn(orderResponse);
+        when(userInfoService.getUserInfoById(newUserId)).thenReturn(userResponse);
+        when(orderMapper.toMessage(savedOrder, totalAmount)).thenReturn(orderMessage);
+
+        OrderWithUserResponseDto result = orderService.updateOrder(orderId, requestDto);
+
+        assertThat(result).isNotNull();
         assertThat(result.getOrder().getStatus()).isEqualTo(OrderStatus.CHANGED);
-        verify(orderRepository).save(existing);
-        verify(orderItemMapper).toEntity(itemReq);
+        assertThat(result.getOrder().getUserId()).isEqualTo(newUserId);
+        assertThat(result.getUser().getId()).isEqualTo(newUserId);
+
+        verify(orderRepository).findById(orderId);
+        verify(itemRepository).findById(itemId);
+        verify(orderRepository).save(existingOrder);
         verify(orderProducer).sendCreateOrderEvent(orderMessage);
-        verify(orderMapper).toMessage(saved, expectedTotalAmount); // Проверяем вызов с totalAmount
+        verify(userInfoService).getUserInfoById(newUserId);
     }
 
     @Test
