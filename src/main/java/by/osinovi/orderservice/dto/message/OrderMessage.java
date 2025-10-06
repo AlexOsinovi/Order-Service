@@ -1,4 +1,4 @@
-package by.osinovi.orderservice.dto.item;
+package by.osinovi.orderservice.dto.message;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -7,12 +7,13 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 
+
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class ItemResponseDto {
-    private Long id;
-    private String name;
-    private BigDecimal price;
+public class OrderMessage {
+    private Long orderId;
+    private Long userId;
+    private BigDecimal totalAmount;
 }
