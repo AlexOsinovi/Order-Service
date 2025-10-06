@@ -37,7 +37,7 @@ class OrderItemServiceImplTests {
 	private OrderRepository orderRepository;
 
 	@Mock
-	private ItemRepository itemRepository; // <-- ДОБАВЛЕН МОК
+	private ItemRepository itemRepository;
 
 	@Mock
 	private OrderItemMapper orderItemMapper;
@@ -65,7 +65,7 @@ class OrderItemServiceImplTests {
 		OrderItemResponseDto resp = new OrderItemResponseDto(11L, null, 2);
 
 		when(orderRepository.findById(7L)).thenReturn(Optional.of(order));
-		when(itemRepository.findById(3L)).thenReturn(Optional.of(item)); // <-- ИСПРАВЛЕНО: Добавлен мок для itemRepository
+		when(itemRepository.findById(3L)).thenReturn(Optional.of(item));
 		when(orderItemMapper.toEntity(req)).thenReturn(entity);
 		when(orderItemRepository.save(any(OrderItem.class))).thenReturn(saved);
 		when(orderItemMapper.toResponse(saved)).thenReturn(resp);
@@ -98,7 +98,7 @@ class OrderItemServiceImplTests {
 
 		when(orderRepository.findById(7L)).thenReturn(Optional.of(order));
 		when(orderItemMapper.toEntity(any(OrderItemRequestDto.class))).thenReturn(entity);
-		when(itemRepository.findById(3L)).thenReturn(Optional.empty()); // Мок для несуществующего товара
+		when(itemRepository.findById(3L)).thenReturn(Optional.empty());
 
 		assertThatThrownBy(() -> orderItemService.createOrderItem(new OrderItemRequestDto(3L, 1), 7L))
 				.isInstanceOf(NotFoundException.class)
@@ -139,7 +139,7 @@ class OrderItemServiceImplTests {
 
 	@Test
 	void updateOrderItem_success_changesQuantityAndItem() {
-		OrderItemRequestDto req = new OrderItemRequestDto(99L, 5); // Новый ID товара и количество
+		OrderItemRequestDto req = new OrderItemRequestDto(99L, 5);
 		Item existingItem = new Item();
 		existingItem.setId(1L);
 		Item newItem = new Item();
@@ -150,8 +150,8 @@ class OrderItemServiceImplTests {
 		existingOrderItem.setQuantity(1);
 
 		when(orderItemRepository.findById(12L)).thenReturn(Optional.of(existingOrderItem));
-		when(itemRepository.findById(99L)).thenReturn(Optional.of(newItem)); // <-- ИСПРАВЛЕНО: Добавлен мок для нового товара
-		when(orderItemRepository.save(any(OrderItem.class))).thenAnswer(invocation -> invocation.getArgument(0)); // Возвращаем измененный объект
+		when(itemRepository.findById(99L)).thenReturn(Optional.of(newItem));
+		when(orderItemRepository.save(any(OrderItem.class))).thenAnswer(invocation -> invocation.getArgument(0));
 		when(orderItemMapper.toResponse(any(OrderItem.class))).thenAnswer(invocation -> {
 			OrderItem saved = invocation.getArgument(0);
 			return new OrderItemResponseDto(saved.getId(), null, saved.getQuantity());
@@ -163,12 +163,12 @@ class OrderItemServiceImplTests {
 		verify(orderItemRepository).save(captor.capture());
 		assertThat(captor.getValue().getId()).isEqualTo(12L);
 		assertThat(captor.getValue().getQuantity()).isEqualTo(5);
-		assertThat(captor.getValue().getItem().getId()).isEqualTo(99L); // Проверяем, что товар изменился
+		assertThat(captor.getValue().getItem().getId()).isEqualTo(99L);
 	}
 
 	@Test
 	void updateOrderItem_success_changesOnlyQuantity() {
-		OrderItemRequestDto req = new OrderItemRequestDto(1L, 10); // ID товара тот же, меняем количество
+		OrderItemRequestDto req = new OrderItemRequestDto(1L, 10);
 		Item item = new Item();
 		item.setId(1L);
 		OrderItem existingOrderItem = new OrderItem();
@@ -180,7 +180,7 @@ class OrderItemServiceImplTests {
 
 		orderItemService.updateOrderItem(15L, req);
 
-		verify(itemRepository, never()).findById(any(Long.class)); // Убеждаемся, что itemRepository не вызывался
+		verify(itemRepository, never()).findById(any(Long.class));
 		ArgumentCaptor<OrderItem> captor = ArgumentCaptor.forClass(OrderItem.class);
 		verify(orderItemRepository).save(captor.capture());
 		assertThat(captor.getValue().getQuantity()).isEqualTo(10);

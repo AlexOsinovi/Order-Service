@@ -179,7 +179,6 @@ class OrderServiceImplTests {
         OrderItemRequestDto itemRequest = new OrderItemRequestDto(itemId, quantity);
         OrderRequestDto requestDto = new OrderRequestDto(newUserId, LocalDate.now(), List.of(itemRequest));
 
-        // The order that we pretend is already in the database
         Order existingOrder = new Order();
         existingOrder.setId(orderId);
         existingOrder.setOrderItems(new ArrayList<>());
