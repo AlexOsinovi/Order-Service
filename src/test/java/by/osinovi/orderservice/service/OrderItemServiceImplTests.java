@@ -52,14 +52,13 @@ class OrderItemServiceImplTests {
 
 	@Test
 	void createOrderItem_success() {
-		// Arrange
 		OrderItemRequestDto req = new OrderItemRequestDto(3L, 2);
 		Order order = new Order();
 		order.setId(7L);
 		Item item = new Item();
 		item.setId(3L);
 		OrderItem entity = new OrderItem();
-		entity.setItem(item); // Предполагаем, что маппер устанавливает Item с ID
+		entity.setItem(item);
 		entity.setQuantity(2);
 		OrderItem saved = new OrderItem();
 		saved.setId(11L);
@@ -71,10 +70,8 @@ class OrderItemServiceImplTests {
 		when(orderItemRepository.save(any(OrderItem.class))).thenReturn(saved);
 		when(orderItemMapper.toResponse(saved)).thenReturn(resp);
 
-		// Act
 		OrderItemResponseDto result = orderItemService.createOrderItem(req, 7L);
 
-		// Assert
 		assertThat(result.getId()).isEqualTo(11L);
 		ArgumentCaptor<OrderItem> captor = ArgumentCaptor.forClass(OrderItem.class);
 		verify(orderItemRepository).save(captor.capture());
@@ -90,7 +87,7 @@ class OrderItemServiceImplTests {
 				.hasMessageContaining("Order with ID 1 not found");
 	}
 
-	@Test // <-- НОВЫЙ ТЕСТ
+	@Test
 	void createOrderItem_itemNotFound() {
 		Order order = new Order();
 		order.setId(7L);
@@ -108,7 +105,6 @@ class OrderItemServiceImplTests {
 				.hasMessageContaining("Item with ID 3 not found");
 	}
 
-	// ... тесты getOrderItemById_found, getOrderItemById_notFound, getOrderItemsByOrderId_maps остаются без изменений ...
 	@Test
 	void getOrderItemById_found() {
 		OrderItem item = new OrderItem();
@@ -143,7 +139,6 @@ class OrderItemServiceImplTests {
 
 	@Test
 	void updateOrderItem_success_changesQuantityAndItem() {
-		// Arrange
 		OrderItemRequestDto req = new OrderItemRequestDto(99L, 5); // Новый ID товара и количество
 		Item existingItem = new Item();
 		existingItem.setId(1L);
@@ -162,10 +157,8 @@ class OrderItemServiceImplTests {
 			return new OrderItemResponseDto(saved.getId(), null, saved.getQuantity());
 		});
 
-		// Act
 		orderItemService.updateOrderItem(12L, req);
 
-		// Assert
 		ArgumentCaptor<OrderItem> captor = ArgumentCaptor.forClass(OrderItem.class);
 		verify(orderItemRepository).save(captor.capture());
 		assertThat(captor.getValue().getId()).isEqualTo(12L);
@@ -173,9 +166,8 @@ class OrderItemServiceImplTests {
 		assertThat(captor.getValue().getItem().getId()).isEqualTo(99L); // Проверяем, что товар изменился
 	}
 
-	@Test // <-- НОВЫЙ ТЕСТ
+	@Test
 	void updateOrderItem_success_changesOnlyQuantity() {
-		// Arrange
 		OrderItemRequestDto req = new OrderItemRequestDto(1L, 10); // ID товара тот же, меняем количество
 		Item item = new Item();
 		item.setId(1L);
@@ -186,10 +178,8 @@ class OrderItemServiceImplTests {
 
 		when(orderItemRepository.findById(15L)).thenReturn(Optional.of(existingOrderItem));
 
-		// Act
 		orderItemService.updateOrderItem(15L, req);
 
-		// Assert
 		verify(itemRepository, never()).findById(any(Long.class)); // Убеждаемся, что itemRepository не вызывался
 		ArgumentCaptor<OrderItem> captor = ArgumentCaptor.forClass(OrderItem.class);
 		verify(orderItemRepository).save(captor.capture());
