@@ -25,7 +25,7 @@ class PaymentConsumerTests {
     @Test
     void handleCreatePayment_success() {
         UUID paymentId = UUID.randomUUID();
-        PaymentMessage paymentMessage = new PaymentMessage(paymentId, 1L, 100L, 
+        PaymentMessage paymentMessage = new PaymentMessage(paymentId, 1L, 100L,
                 by.osinovi.orderservice.util.PaymentStatus.SUCCESS, BigDecimal.valueOf(50.0));
 
         paymentConsumer.handleCreatePayment(paymentMessage);
@@ -36,7 +36,7 @@ class PaymentConsumerTests {
     @Test
     void handleCreatePayment_failed() {
         UUID paymentId = UUID.randomUUID();
-        PaymentMessage paymentMessage = new PaymentMessage(paymentId, 1L, 100L, 
+        PaymentMessage paymentMessage = new PaymentMessage(paymentId, 1L, 100L,
                 by.osinovi.orderservice.util.PaymentStatus.FAILED, BigDecimal.valueOf(50.0));
 
         paymentConsumer.handleCreatePayment(paymentMessage);

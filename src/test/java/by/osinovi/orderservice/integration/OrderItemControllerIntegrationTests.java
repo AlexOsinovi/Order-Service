@@ -3,22 +3,16 @@ package by.osinovi.orderservice.integration;
 import by.osinovi.orderservice.dto.order_item.OrderItemRequestDto;
 import by.osinovi.orderservice.entity.Item;
 import by.osinovi.orderservice.entity.Order;
+import by.osinovi.orderservice.integration.config.BaseIntegrationTest;
 import by.osinovi.orderservice.repository.ItemRepository;
 import by.osinovi.orderservice.repository.OrderRepository;
 import by.osinovi.orderservice.util.OrderStatus;
-import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpStatus;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
+import org.springframework.test.annotation.DirtiesContext;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -30,38 +24,14 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@Testcontainers
-class OrderItemControllerIntegrationTests {
-
-    @LocalServerPort
-    private Integer port;
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
+class OrderItemControllerIntegrationTests extends BaseIntegrationTest {
 
     @Autowired
     private ItemRepository itemRepository;
 
     @Autowired
     private OrderRepository orderRepository;
-
-    @Container
-    private static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine")
-            .withDatabaseName("order_service_test")
-            .withUsername("postgres")
-            .withPassword("password");
-
-    @BeforeEach
-    void setUp() {
-        RestAssured.port = port;
-        RestAssured.enableLoggingOfRequestAndResponseIfValidationFails();
-    }
-
-    @DynamicPropertySource
-    static void configureProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", postgres::getJdbcUrl);
-        registry.add("spring.datasource.username", postgres::getUsername);
-        registry.add("spring.datasource.password", postgres::getPassword);
-        registry.add("spring.jpa.hibernate.ddl-auto", () -> "create-drop");
-        registry.add("spring.liquibase.enabled", () -> "false");
-    }
 
     @Test
     void createOrderItem_ValidRequest_ReturnsCreatedOrderItem() {

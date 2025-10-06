@@ -20,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Objects;
 
@@ -43,7 +44,9 @@ public class OrderServiceImpl implements OrderService {
 
         Order saved = orderRepository.save(order);
 
-        orderProducer.sendCreateOrderEvent(orderMapper.toMessage(saved));
+        BigDecimal totalAmount = calculateTotalAmount(saved);
+
+        orderProducer.sendCreateOrderEvent(orderMapper.toMessage(saved, totalAmount));
 
         UserInfoResponseDto user = userInfoService.getUserInfoById(saved.getUserId());
 
@@ -107,7 +110,9 @@ public class OrderServiceImpl implements OrderService {
                 });
         Order updated = orderRepository.save(existing);
 
-        orderProducer.sendCreateOrderEvent(orderMapper.toMessage(updated));
+        BigDecimal totalAmount = calculateTotalAmount(updated);
+
+        orderProducer.sendCreateOrderEvent(orderMapper.toMessage(updated, totalAmount));
 
         updated.setStatus(OrderStatus.CHANGED);
         OrderResponseDto orderResponse = orderMapper.toResponse(updated);
@@ -134,5 +139,12 @@ public class OrderServiceImpl implements OrderService {
             orderRepository.save(order);
             log.info("Updated order {} with status {}", paymentMessage.getOrderId(), order.getStatus());
         }, () -> log.error("Cannot find order with id {} for starting processing", paymentMessage.getOrderId()));
+    }
+
+    private BigDecimal calculateTotalAmount(Order order) {
+        return order.getOrderItems().stream()
+                .filter(item -> item.getItem() != null && item.getItem().getPrice() != null)
+                .map(item -> item.getItem().getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 }

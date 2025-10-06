@@ -7,7 +7,9 @@ import by.osinovi.orderservice.dto.order.OrderResponseDto;
 import by.osinovi.orderservice.dto.order.OrderWithUserResponseDto;
 import by.osinovi.orderservice.dto.order_item.OrderItemRequestDto;
 import by.osinovi.orderservice.dto.user_info.UserInfoResponseDto;
+import by.osinovi.orderservice.entity.Item;
 import by.osinovi.orderservice.entity.Order;
+import by.osinovi.orderservice.entity.OrderItem;
 import by.osinovi.orderservice.exception.NotFoundException;
 import by.osinovi.orderservice.kafka.OrderProducer;
 import by.osinovi.orderservice.mapper.OrderItemMapper;
@@ -70,22 +72,30 @@ class OrderServiceImplTests {
         saved.setId(5L);
         saved.setUserId(100L);
         saved.setStatus(OrderStatus.CREATED);
+        Item item = new Item();
+        item.setPrice(BigDecimal.valueOf(50.0));
+        OrderItem orderItem = new OrderItem();
+        orderItem.setItem(item);
+        orderItem.setQuantity(2);
+        saved.setOrderItems(List.of(orderItem));
         OrderResponseDto orderResp = new OrderResponseDto(5L, 100L, null, OrderStatus.CREATED, req.getCreationDate(), List.of());
         UserInfoResponseDto userResp = new UserInfoResponseDto(100L, "John", "Doe", LocalDate.of(1990, 1, 1), "john@example.com");
-        OrderMessage orderMessage = new OrderMessage(5L, 100L, BigDecimal.ZERO);
+        BigDecimal expectedTotalAmount = BigDecimal.valueOf(100.0); // 50 * 2
+        OrderMessage orderMessage = new OrderMessage(5L, 100L, expectedTotalAmount);
 
         when(orderMapper.toEntity(req)).thenReturn(entity);
         when(orderRepository.save(entity)).thenReturn(saved);
         when(orderMapper.toResponse(saved)).thenReturn(orderResp);
-        when(orderMapper.toMessage(saved)).thenReturn(orderMessage);
+        when(orderMapper.toMessage(saved, expectedTotalAmount)).thenReturn(orderMessage);
         when(userInfoService.getUserInfoById(100L)).thenReturn(userResp);
 
         OrderWithUserResponseDto result = orderService.createOrder(req);
-        
+
         assertThat(result.getOrder().getId()).isEqualTo(5L);
         assertThat(result.getUser().getId()).isEqualTo(100L);
         assertThat(result.getOrder().getStatus()).isEqualTo(OrderStatus.CREATED);
         verify(orderProducer).sendCreateOrderEvent(orderMessage);
+        verify(orderMapper).toMessage(saved, expectedTotalAmount);
     }
 
     @Test
@@ -156,30 +166,39 @@ class OrderServiceImplTests {
     void updateOrder_success() {
         OrderItemRequestDto itemReq = new OrderItemRequestDto(9L, 3);
         OrderRequestDto req = new OrderRequestDto(300L, LocalDate.now(), List.of(itemReq));
-        Order existing = new Order(); 
-        existing.setId(55L); 
+        Order existing = new Order();
+        existing.setId(55L);
         existing.setUserId(999L);
         existing.setStatus(OrderStatus.CREATED);
-        Order saved = new Order(); 
-        saved.setId(55L); 
+        Order saved = new Order();
+        saved.setId(55L);
         saved.setUserId(300L);
         saved.setStatus(OrderStatus.CHANGED);
+        Item item = new Item();
+        item.setPrice(BigDecimal.valueOf(30.0));
+        OrderItem orderItem = new OrderItem();
+        orderItem.setItem(item);
+        orderItem.setQuantity(3);
+        saved.setOrderItems(List.of(orderItem));
         OrderResponseDto orderResp = new OrderResponseDto(55L, 300L, null, OrderStatus.CHANGED, req.getCreationDate(), List.of());
-        UserInfoResponseDto userResp = new UserInfoResponseDto(300L, "N","S", LocalDate.now(), "e");
-        OrderMessage orderMessage = new OrderMessage(55L, 300L, BigDecimal.ZERO);
+        UserInfoResponseDto userResp = new UserInfoResponseDto(300L, "N", "S", LocalDate.now(), "e");
+        BigDecimal expectedTotalAmount = BigDecimal.valueOf(90.0); // 30 * 3
+        OrderMessage orderMessage = new OrderMessage(55L, 300L, expectedTotalAmount);
 
         when(orderRepository.findById(55L)).thenReturn(Optional.of(existing));
         when(orderRepository.save(existing)).thenReturn(saved);
         when(orderMapper.toResponse(saved)).thenReturn(orderResp);
-        when(orderMapper.toMessage(saved)).thenReturn(orderMessage);
+        when(orderMapper.toMessage(saved, expectedTotalAmount)).thenReturn(orderMessage);
         when(userInfoService.getUserInfoById(300L)).thenReturn(userResp);
-        when(orderItemMapper.toEntity(itemReq)).thenReturn(new by.osinovi.orderservice.entity.OrderItem());
+        when(orderItemMapper.toEntity(itemReq)).thenReturn(new OrderItem());
 
         OrderWithUserResponseDto result = orderService.updateOrder(55L, req);
+
         assertThat(result.getOrder().getStatus()).isEqualTo(OrderStatus.CHANGED);
         verify(orderRepository).save(existing);
         verify(orderItemMapper).toEntity(itemReq);
         verify(orderProducer).sendCreateOrderEvent(orderMessage);
+        verify(orderMapper).toMessage(saved, expectedTotalAmount); // Проверяем вызов с totalAmount
     }
 
     @Test

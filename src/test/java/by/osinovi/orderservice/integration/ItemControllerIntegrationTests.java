@@ -1,18 +1,12 @@
 package by.osinovi.orderservice.integration;
 
 import by.osinovi.orderservice.dto.item.ItemRequestDto;
-import io.restassured.RestAssured;
+import by.osinovi.orderservice.integration.config.BaseIntegrationTest;
 import io.restassured.http.ContentType;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpStatus;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
+import org.springframework.test.annotation.DirtiesContext;
 
 import java.math.BigDecimal;
 
@@ -23,32 +17,8 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@Testcontainers
-class ItemControllerIntegrationTests {
-
-    @LocalServerPort
-    private Integer port;
-
-    @Container
-    private static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine")
-            .withDatabaseName("order_service_test")
-            .withUsername("postgres")
-            .withPassword("password");
-
-    @BeforeEach
-    void setUp() {
-        RestAssured.port = port;
-        RestAssured.enableLoggingOfRequestAndResponseIfValidationFails();
-    }
-
-    @DynamicPropertySource
-    static void configureProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", postgres::getJdbcUrl);
-        registry.add("spring.datasource.username", postgres::getUsername);
-        registry.add("spring.datasource.password", postgres::getPassword);
-        registry.add("spring.jpa.hibernate.ddl-auto", () -> "create-drop");
-        registry.add("spring.liquibase.enabled", () -> "false");
-    }
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
+class ItemControllerIntegrationTests extends BaseIntegrationTest {
 
     @Test
     void createItem_ValidRequest_ReturnsCreatedItem() {
