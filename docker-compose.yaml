@@ -1,9 +1,9 @@
 services:
   postgres:
-    image: 'postgres:15-alpine'
+    image: 'postgres:16-alpine'
     container_name: 'postgres-order'
     ports:
-      - "5432:5432"
+      - "5433:5432"
     environment:
       POSTGRES_DB: order_service_db
       POSTGRES_USER: ${DB_USER}
@@ -21,15 +21,43 @@ services:
       retries: 20
       start_period: 30s
 
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb-order
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
+      - MONGO_INITDB_DATABASE=${MONGO_INITDB_DATABASE}
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongodb-container-data:/data/db
+      - mongodb-container-config:/data/configdb
+    healthcheck:
+      test: [ "CMD", "mongosh", "--eval", "db.adminCommand('ping')" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - order_network
+    restart: unless-stopped
+    entrypoint: [ "docker-entrypoint.sh" ]
+    command: [ "mongod" ]
+
+
   app:
     build: .
     container_name: 'order_service'
     ports:
       - '8082:8080'
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/order_service_db
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-order:5432/order_service_db
       SPRING_DATASOURCE_USERNAME: ${DB_USER}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      SPRING_DATA_MONGODB_URI: mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongodb-order:27017/${MONGO_INITDB_DATABASE}?authSource=admin
+      ORDER_USER_SERVICE_URL: http://localhost:8080/api/users
+
     env_file:
       - .env
     networks:
@@ -44,3 +72,5 @@ networks:
 
 volumes:
   postgres_data:
+  mongodb-container-data:
+  mongodb-container-config:

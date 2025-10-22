@@ -1,5 +1,11 @@
 package by.osinovi.orderservice.service.impl;
 
+// --- НУЖНЫЕ ИМПОРТЫ ---
+import by.osinovi.orderservice.dto.message.OrderEvent;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.beans.factory.annotation.Value;
+import java.util.stream.Collectors;
+// --- ОСТАЛЬНЫЕ ИМПОРТЫ ---
 import by.osinovi.orderservice.dto.message.PaymentMessage;
 import by.osinovi.orderservice.dto.order.OrderRequestDto;
 import by.osinovi.orderservice.dto.order.OrderResponseDto;
@@ -14,7 +20,7 @@ import by.osinovi.orderservice.mapper.OrderItemMapper;
 import by.osinovi.orderservice.mapper.OrderMapper;
 import by.osinovi.orderservice.repository.ItemRepository;
 import by.osinovi.orderservice.repository.OrderRepository;
-import by.osinovi.orderservice.service.OrderService;
+import by.osinovi.orderservice.service.OrderCommandService; // <-- ИЗМЕНЕНО: новый интерфейс
 import by.osinovi.orderservice.service.UserInfoService;
 import by.osinovi.orderservice.util.OrderStatus;
 import by.osinovi.orderservice.util.PaymentStatus;
@@ -25,12 +31,11 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Objects;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class OrderServiceImpl implements OrderService {
+public class OrderCommandServiceImpl implements OrderCommandService {
 
     private final OrderRepository orderRepository;
     private final ItemRepository itemRepository;
@@ -39,8 +44,17 @@ public class OrderServiceImpl implements OrderService {
     private final UserInfoService userInfoService;
     private final OrderProducer orderProducer;
 
-    @Override
+    private final KafkaTemplate<String, OrderEvent> orderEventKafkaTemplate;
+    private final KafkaTemplate<String, Long> orderDeletedKafkaTemplate;
+
+    @Value("${spring.kafka.topics.order-events}")
+    private String orderEventsTopic;
+
+    @Value("${spring.kafka.topics.order-deleted}")
+    private String orderDeletedTopic;
+
     @Transactional
+    @Override
     public OrderWithUserResponseDto createOrder(OrderRequestDto orderRequestDto) {
         Order order = orderMapper.toEntity(orderRequestDto);
         order.setStatus(OrderStatus.CREATED);
@@ -49,16 +63,12 @@ public class OrderServiceImpl implements OrderService {
                 .peek(orderItem -> {
                     Item itemFromDb = itemRepository.findById(orderItem.getItem().getId())
                             .orElseThrow(() -> new NotFoundException("Item not found with id: " + orderItem.getItem().getId()));
-
                     orderItem.setItem(itemFromDb);
-
                     orderItem.setOrder(order);
-
                 })
                 .toList();
 
         order.setOrderItems(processedItems);
-
 
         Order saved = orderRepository.save(order);
 
@@ -66,55 +76,15 @@ public class OrderServiceImpl implements OrderService {
 
         orderProducer.sendCreateOrderEvent(orderMapper.toMessage(saved, totalAmount));
 
+        publishOrderEvent(saved, totalAmount);
+
         UserInfoResponseDto user = userInfoService.getUserInfoById(saved.getUserId());
-
         OrderResponseDto orderResponse = orderMapper.toResponse(saved);
-
         return new OrderWithUserResponseDto(orderResponse, user);
     }
 
-    @Override
-    public OrderWithUserResponseDto getOrderById(Long id) {
-        Order order = orderRepository.findById(id).orElseThrow(() -> new NotFoundException("Order with " + id + " not found"));
-        OrderResponseDto orderResponse = orderMapper.toResponse(order);
-        UserInfoResponseDto user = userInfoService.getUserInfoById(order.getUserId());
-        return new OrderWithUserResponseDto(orderResponse, user);
-    }
-
-    @Override
-    public List<OrderWithUserResponseDto> getAllOrders() {
-        return orderRepository.findAll().stream()
-                .map(order -> {
-                    try {
-                        OrderResponseDto orderResponse = orderMapper.toResponse(order);
-                        UserInfoResponseDto user = userInfoService.getUserInfoById(order.getUserId());
-                        return new OrderWithUserResponseDto(orderResponse, user);
-                    } catch (NotFoundException e) {
-                        return null;
-                    }
-                })
-                .filter(Objects::nonNull)
-                .toList();
-    }
-
-    @Override
-    public List<OrderWithUserResponseDto> getOrdersByStatuses(List<String> statuses) {
-        return orderRepository.findByStatuses(statuses).stream()
-                .map(order -> {
-                    try {
-                        OrderResponseDto orderResponse = orderMapper.toResponse(order);
-                        UserInfoResponseDto user = userInfoService.getUserInfoById(order.getUserId());
-                        return new OrderWithUserResponseDto(orderResponse, user);
-                    } catch (NotFoundException e) {
-                        return null;
-                    }
-                })
-                .filter(Objects::nonNull)
-                .toList();
-    }
-
-    @Override
     @Transactional
+    @Override
     public OrderWithUserResponseDto updateOrder(Long id, OrderRequestDto orderRequestDto) {
         Order existing = orderRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Order with ID " + id + " not found"));
@@ -129,36 +99,40 @@ public class OrderServiceImpl implements OrderService {
                 .peek(newOrderItem -> {
                     Item itemFromDb = itemRepository.findById(newOrderItem.getItem().getId())
                             .orElseThrow(() -> new NotFoundException("Item not found with id: " + newOrderItem.getItem().getId()));
-
                     newOrderItem.setItem(itemFromDb);
                     newOrderItem.setOrder(existing);
                 })
                 .toList();
 
         existing.getOrderItems().addAll(newOrderItems);
-
         existing.setStatus(OrderStatus.CHANGED);
 
         Order updated = orderRepository.save(existing);
-
         BigDecimal totalAmount = calculateTotalAmount(updated);
+
         orderProducer.sendCreateOrderEvent(orderMapper.toMessage(updated, totalAmount));
+
+        publishOrderEvent(updated, totalAmount);
+
         OrderResponseDto orderResponse = orderMapper.toResponse(updated);
         UserInfoResponseDto user = userInfoService.getUserInfoById(updated.getUserId());
-
         return new OrderWithUserResponseDto(orderResponse, user);
     }
 
+    @Transactional
     @Override
     public void deleteOrder(Long id) {
         if (!orderRepository.existsById(id)) {
             throw new NotFoundException("Order with ID " + id + " not found");
         }
         orderRepository.deleteById(id);
+
+        orderDeletedKafkaTemplate.send(orderDeletedTopic, id.toString(), id);
+        log.info("Published OrderDeletedEvent for order ID: {}", id);
     }
 
-    @Override
     @Transactional
+    @Override
     public void processPayment(PaymentMessage paymentMessage) {
         orderRepository.findById(paymentMessage.getOrderId()).ifPresentOrElse(order -> {
             order.setStatus(paymentMessage.getStatus().equals(PaymentStatus.SUCCESS) ? OrderStatus.PAID : OrderStatus.FAILED);
@@ -174,4 +148,28 @@ public class OrderServiceImpl implements OrderService {
                 .map(item -> item.getItem().getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
+
+    private void publishOrderEvent(Order order, BigDecimal totalAmount) {
+        List<OrderEvent.OrderItemData> itemsData = order.getOrderItems().stream()
+                .map(oi -> OrderEvent.OrderItemData.builder()
+                        .itemId(oi.getItem().getId())
+                        .itemName(oi.getItem().getName())
+                        .price(oi.getItem().getPrice())
+                        .quantity(oi.getQuantity())
+                        .build())
+                .collect(Collectors.toList());
+
+        OrderEvent event = OrderEvent.builder()
+                .orderId(order.getId())
+                .userId(order.getUserId())
+                .status(order.getStatus())
+                .creationDate(order.getCreationDate())
+                .totalAmount(totalAmount)
+                .items(itemsData)
+                .build();
+
+        orderEventKafkaTemplate.send(orderEventsTopic, order.getId().toString(), event);
+        log.info("Published OrderEvent for order ID: {}", order.getId());
+    }
+
 }
