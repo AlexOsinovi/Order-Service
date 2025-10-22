@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @RequiredArgsConstructor
 public class OrderProducer {
-    private final KafkaTemplate<String, Object> orderKafkaTemplate;
+    private final KafkaTemplate<String, OrderMessage> orderKafkaTemplate;
 
     @Value("${spring.kafka.topics.orders}")
     private String ordersTopic;

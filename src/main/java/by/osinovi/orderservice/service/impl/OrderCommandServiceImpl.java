@@ -1,9 +1,6 @@
 package by.osinovi.orderservice.service.impl;
 
 import by.osinovi.orderservice.dto.message.OrderEvent;
-import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.beans.factory.annotation.Value;
-import java.util.stream.Collectors;
 import by.osinovi.orderservice.dto.message.PaymentMessage;
 import by.osinovi.orderservice.dto.order.OrderRequestDto;
 import by.osinovi.orderservice.dto.order.OrderResponseDto;
@@ -13,6 +10,8 @@ import by.osinovi.orderservice.entity.Item;
 import by.osinovi.orderservice.entity.Order;
 import by.osinovi.orderservice.entity.OrderItem;
 import by.osinovi.orderservice.exception.NotFoundException;
+import by.osinovi.orderservice.kafka.OrderDeletedEventProducer;
+import by.osinovi.orderservice.kafka.OrderEventProducer;
 import by.osinovi.orderservice.kafka.OrderProducer;
 import by.osinovi.orderservice.mapper.OrderItemMapper;
 import by.osinovi.orderservice.mapper.OrderMapper;
@@ -29,6 +28,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -41,15 +41,9 @@ public class OrderCommandServiceImpl implements OrderCommandService {
     private final OrderItemMapper orderItemMapper;
     private final UserInfoService userInfoService;
     private final OrderProducer orderProducer;
+    private final OrderEventProducer orderEventProducer;
+    private final OrderDeletedEventProducer orderDeletedEventProducer;
 
-    private final KafkaTemplate<String, OrderEvent> orderEventKafkaTemplate;
-    private final KafkaTemplate<String, Long> orderDeletedKafkaTemplate;
-
-    @Value("${spring.kafka.topics.order-events}")
-    private String orderEventsTopic;
-
-    @Value("${spring.kafka.topics.order-deleted}")
-    private String orderDeletedTopic;
 
     @Transactional
     @Override
@@ -124,10 +118,7 @@ public class OrderCommandServiceImpl implements OrderCommandService {
             throw new NotFoundException("Order with ID " + id + " not found");
         }
         orderRepository.deleteById(id);
-
-        orderDeletedKafkaTemplate.send(orderDeletedTopic, id.toString(), id);
-
-        log.info("Published OrderDeletedEvent for order ID: {}", id);
+        orderDeletedEventProducer.sendCreateOrderDeletedEvent(id);
     }
 
     @Transactional
@@ -170,7 +161,6 @@ public class OrderCommandServiceImpl implements OrderCommandService {
                 .items(itemsData)
                 .build();
 
-        orderEventKafkaTemplate.send(orderEventsTopic, order.getId().toString(), event);
-        log.info("Published OrderEvent for order ID: {}", order.getId());
+        orderEventProducer.sendCreateOrderEventToMongo(order,event);
     }
 }
