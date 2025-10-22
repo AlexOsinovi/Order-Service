@@ -1,11 +1,9 @@
 package by.osinovi.orderservice.service.impl;
 
-// --- НУЖНЫЕ ИМПОРТЫ ---
 import by.osinovi.orderservice.dto.message.OrderEvent;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import java.util.stream.Collectors;
-// --- ОСТАЛЬНЫЕ ИМПОРТЫ ---
 import by.osinovi.orderservice.dto.message.PaymentMessage;
 import by.osinovi.orderservice.dto.order.OrderRequestDto;
 import by.osinovi.orderservice.dto.order.OrderResponseDto;
@@ -20,7 +18,7 @@ import by.osinovi.orderservice.mapper.OrderItemMapper;
 import by.osinovi.orderservice.mapper.OrderMapper;
 import by.osinovi.orderservice.repository.ItemRepository;
 import by.osinovi.orderservice.repository.OrderRepository;
-import by.osinovi.orderservice.service.OrderCommandService; // <-- ИЗМЕНЕНО: новый интерфейс
+import by.osinovi.orderservice.service.OrderCommandService;
 import by.osinovi.orderservice.service.UserInfoService;
 import by.osinovi.orderservice.util.OrderStatus;
 import by.osinovi.orderservice.util.PaymentStatus;
@@ -74,13 +72,10 @@ public class OrderCommandServiceImpl implements OrderCommandService {
 
         BigDecimal totalAmount = calculateTotalAmount(saved);
 
-        // 1. Отправка сообщения для Payment Service (без изменений)
         orderProducer.sendCreateOrderEvent(orderMapper.toMessage(saved, totalAmount));
 
-        // 2. >>> НОВОЕ: Публикация "богатого" события для Проектора (Read Model) <<<
         publishOrderEvent(saved, totalAmount);
 
-        // --- Логика ответа остается (для хорошего UX) ---
         UserInfoResponseDto user = userInfoService.getUserInfoById(saved.getUserId());
         OrderResponseDto orderResponse = orderMapper.toResponse(saved);
         return new OrderWithUserResponseDto(orderResponse, user);
@@ -115,10 +110,8 @@ public class OrderCommandServiceImpl implements OrderCommandService {
 
         orderProducer.sendCreateOrderEvent(orderMapper.toMessage(updated, totalAmount));
 
-        // 2. >>> НОВОЕ: Публикация "богатого" события для Проектора (Read Model) <<<
         publishOrderEvent(updated, totalAmount);
 
-        // --- Логика ответа остается ---
         OrderResponseDto orderResponse = orderMapper.toResponse(updated);
         UserInfoResponseDto user = userInfoService.getUserInfoById(updated.getUserId());
         return new OrderWithUserResponseDto(orderResponse, user);
@@ -140,10 +133,7 @@ public class OrderCommandServiceImpl implements OrderCommandService {
     @Transactional
     @Override
     public void processPayment(PaymentMessage paymentMessage) {
-        // --- ЭТОТ МЕТОД НЕ МЕНЯЕТСЯ ---
-        // Он отвечает ТОЛЬКО за обновление Write-базы (Postgres).
-        // Read-базу (Mongo) обновит `OrderProjector`, который слушает
-        // тот же топик (`payments-reply`)
+
         orderRepository.findById(paymentMessage.getOrderId()).ifPresentOrElse(order -> {
             order.setStatus(paymentMessage.getStatus().equals(PaymentStatus.SUCCESS) ? OrderStatus.PAID : OrderStatus.FAILED);
             order.setPaymentId(paymentMessage.getId());
@@ -161,11 +151,6 @@ public class OrderCommandServiceImpl implements OrderCommandService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    // --- НОВЫЙ ПРИВАТНЫЙ МЕТОД ---
-    /**
-     * Собирает полное событие OrderEvent и отправляет его в топик
-     * для обновления Read-модели (MongoDB).
-     */
     private void publishOrderEvent(Order order, BigDecimal totalAmount) {
         List<OrderEvent.OrderItemData> itemsData = order.getOrderItems().stream()
                 .map(oi -> OrderEvent.OrderItemData.builder()
