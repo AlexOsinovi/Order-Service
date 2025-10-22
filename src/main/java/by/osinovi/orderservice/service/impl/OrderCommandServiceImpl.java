@@ -74,10 +74,13 @@ public class OrderCommandServiceImpl implements OrderCommandService {
 
         BigDecimal totalAmount = calculateTotalAmount(saved);
 
+        // 1. Отправка сообщения для Payment Service (без изменений)
         orderProducer.sendCreateOrderEvent(orderMapper.toMessage(saved, totalAmount));
 
+        // 2. >>> НОВОЕ: Публикация "богатого" события для Проектора (Read Model) <<<
         publishOrderEvent(saved, totalAmount);
 
+        // --- Логика ответа остается (для хорошего UX) ---
         UserInfoResponseDto user = userInfoService.getUserInfoById(saved.getUserId());
         OrderResponseDto orderResponse = orderMapper.toResponse(saved);
         return new OrderWithUserResponseDto(orderResponse, user);
@@ -112,8 +115,10 @@ public class OrderCommandServiceImpl implements OrderCommandService {
 
         orderProducer.sendCreateOrderEvent(orderMapper.toMessage(updated, totalAmount));
 
+        // 2. >>> НОВОЕ: Публикация "богатого" события для Проектора (Read Model) <<<
         publishOrderEvent(updated, totalAmount);
 
+        // --- Логика ответа остается ---
         OrderResponseDto orderResponse = orderMapper.toResponse(updated);
         UserInfoResponseDto user = userInfoService.getUserInfoById(updated.getUserId());
         return new OrderWithUserResponseDto(orderResponse, user);
@@ -128,17 +133,24 @@ public class OrderCommandServiceImpl implements OrderCommandService {
         orderRepository.deleteById(id);
 
         orderDeletedKafkaTemplate.send(orderDeletedTopic, id.toString(), id);
+
         log.info("Published OrderDeletedEvent for order ID: {}", id);
     }
 
     @Transactional
     @Override
     public void processPayment(PaymentMessage paymentMessage) {
+        // --- ЭТОТ МЕТОД НЕ МЕНЯЕТСЯ ---
+        // Он отвечает ТОЛЬКО за обновление Write-базы (Postgres).
+        // Read-базу (Mongo) обновит `OrderProjector`, который слушает
+        // тот же топик (`payments-reply`)
         orderRepository.findById(paymentMessage.getOrderId()).ifPresentOrElse(order -> {
             order.setStatus(paymentMessage.getStatus().equals(PaymentStatus.SUCCESS) ? OrderStatus.PAID : OrderStatus.FAILED);
             order.setPaymentId(paymentMessage.getId());
             orderRepository.save(order);
             log.info("Updated order {} with status {}", paymentMessage.getOrderId(), order.getStatus());
+
+
         }, () -> log.error("Cannot find order with id {} for starting processing", paymentMessage.getOrderId()));
     }
 
@@ -149,6 +161,11 @@ public class OrderCommandServiceImpl implements OrderCommandService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
+    // --- НОВЫЙ ПРИВАТНЫЙ МЕТОД ---
+    /**
+     * Собирает полное событие OrderEvent и отправляет его в топик
+     * для обновления Read-модели (MongoDB).
+     */
     private void publishOrderEvent(Order order, BigDecimal totalAmount) {
         List<OrderEvent.OrderItemData> itemsData = order.getOrderItems().stream()
                 .map(oi -> OrderEvent.OrderItemData.builder()
@@ -171,5 +188,4 @@ public class OrderCommandServiceImpl implements OrderCommandService {
         orderEventKafkaTemplate.send(orderEventsTopic, order.getId().toString(), event);
         log.info("Published OrderEvent for order ID: {}", order.getId());
     }
-
 }

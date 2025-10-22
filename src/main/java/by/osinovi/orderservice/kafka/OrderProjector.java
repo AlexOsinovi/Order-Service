@@ -68,6 +68,7 @@ public class OrderProjector {
             orderDoc.setPaymentId(paymentMessage.getId());
             mongoRepository.save(orderDoc);
         });
+        log.info("Updated order {} with status {}", paymentMessage.getOrderId(), paymentMessage.getStatus());
     }
 
     @KafkaListener(topics = "${spring.kafka.topics.order-deleted}", groupId = "order-projector-group")

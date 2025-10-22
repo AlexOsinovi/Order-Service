@@ -52,14 +52,12 @@ spring:
         spring:
           json:
             type:
-              mapping: by.osinovi.orderservice.dto.message.OrderEvent:orderEvent,by.osinovi.orderservice.dto.message.OrderMessage:orderMsg,java.lang.Long:long
+              mapping: orderEvent:by.osinovi.orderservice.dto.message.OrderEvent,orderMsg:by.osinovi.orderservice.dto.message.OrderMessage,long:java.lang.Long
             add:
               type:
                 headers: true
         enable:
           idempotence: true
-        transactional:
-          id: order-service-1
 
 user:
   service:
@@ -74,4 +72,10 @@ management:
     health:
       probes:
         enabled: true
+
+logging:
+  level:
+    by.osinovi.orderservice: DEBUG
+#    org.apache.kafka.clients: DEBUG
+#    org.springframework.kafka: DEBUG
 
