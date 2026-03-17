@@ -3,15 +3,18 @@ package by.osinovi.orderservice.service;
 import by.osinovi.orderservice.dto.message.PaymentMessage;
 import by.osinovi.orderservice.dto.order.OrderRequestDto;
 import by.osinovi.orderservice.dto.order.OrderWithUserResponseDto;
+import jakarta.transaction.Transactional;
 
-import java.util.List;
-
-public interface OrderService {
+public interface OrderCommandService {
+    @Transactional
     OrderWithUserResponseDto createOrder(OrderRequestDto orderRequestDto);
-    OrderWithUserResponseDto getOrderById(Long id);
-    List<OrderWithUserResponseDto> getAllOrders();
-    List<OrderWithUserResponseDto> getOrdersByStatuses(List<String> statuses);
+
+    @Transactional
     OrderWithUserResponseDto updateOrder(Long id, OrderRequestDto orderRequestDto);
+
+    @Transactional
     void deleteOrder(Long id);
+
+    @Transactional
     void processPayment(PaymentMessage paymentMessage);
 }
